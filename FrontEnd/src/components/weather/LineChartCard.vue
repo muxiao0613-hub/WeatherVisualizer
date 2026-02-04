@@ -40,10 +40,23 @@ const preferenceStore = usePreferenceStore()
 const chartRef = ref<HTMLElement>()
 const chartInstance = ref<ECharts>()
 const activeTab = ref('temperature')
+const isInitialized = ref(false)
+const retryCount = ref(0)
 
 const initChart = () => {
   if (!chartRef.value) {
-    console.error('LineChartCard: chartRef is null')
+    console.warn('LineChartCard: chartRef is null, retrying...')
+    if (retryCount.value < 3) {
+      retryCount.value++
+      setTimeout(() => initChart(), 100)
+    }
+    return
+  }
+
+  const containerRect = chartRef.value.getBoundingClientRect()
+  if (containerRect.width === 0 || containerRect.height === 0) {
+    console.warn('LineChartCard: Container has zero size, waiting...')
+    setTimeout(() => initChart(), 200)
     return
   }
 
@@ -51,24 +64,30 @@ const initChart = () => {
     chartInstance.value.dispose()
   }
 
-  chartInstance.value = echarts.init(chartRef.value)
-  console.log('LineChartCard: Chart initialized')
+  try {
+    chartInstance.value = echarts.init(chartRef.value)
+    isInitialized.value = true
+    retryCount.value = 0
+    console.log('LineChartCard: Chart initialized successfully')
 
-  if (props.data.length > 0) {
-    updateChart()
+    if (props.data.length > 0) {
+      updateChart()
+    }
+
+    window.addEventListener('resize', handleResize)
+  } catch (error) {
+    console.error('LineChartCard: Failed to initialize chart:', error)
   }
-
-  window.addEventListener('resize', handleResize)
 }
 
 const updateChart = () => {
-  if (!chartInstance.value) {
-    console.error('LineChartCard: chartInstance is null')
+  if (!isInitialized.value || !chartInstance.value) {
+    console.warn('LineChartCard: Chart not initialized, skipping update')
     return
   }
 
   if (!props.data || props.data.length === 0) {
-    console.warn('LineChartCard: No data available')
+    console.warn('LineChartCard: No data available, clearing chart')
     chartInstance.value.clear()
     return
   }
@@ -186,59 +205,100 @@ const updateChart = () => {
     ]
   }
 
-  chartInstance.value.setOption(option)
+  chartInstance.value.setOption(option, true)
   console.log('LineChartCard: Chart option set successfully')
 }
 
 const handleResize = () => {
-  chartInstance.value?.resize()
+  if (chartInstance.value && isInitialized.value) {
+    chartInstance.value.resize()
+  }
 }
 
 watch(activeTab, () => {
   console.log('LineChartCard: Active tab changed to', activeTab.value)
-  updateChart()
+  if (isInitialized.value) {
+    updateChart()
+  }
 })
 
 watch(() => props.data, (newData) => {
   console.log('LineChartCard: Data changed, length:', newData?.length)
-  nextTick(() => {
-    updateChart()
-  })
+  if (!isInitialized.value && newData && newData.length > 0) {
+    nextTick(() => {
+      setTimeout(() => initChart(), 100)
+    })
+  } else if (isInitialized.value) {
+    nextTick(() => {
+      updateChart()
+    })
+  }
 }, { deep: true })
 
 onMounted(() => {
   console.log('LineChartCard: Component mounted')
   nextTick(() => {
-    initChart()
+    setTimeout(() => initChart(), 100)
   })
 })
 
 onBeforeUnmount(() => {
   console.log('LineChartCard: Component unmounting')
   window.removeEventListener('resize', handleResize)
-  chartInstance.value?.dispose()
+  if (chartInstance.value) {
+    chartInstance.value.dispose()
+    chartInstance.value = undefined
+  }
+  isInitialized.value = false
 })
 </script>
 
 <style scoped>
 .line-chart-card {
   border-radius: 16px;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.line-chart-card :deep(.el-card__body) {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  padding: 16px 20px 20px 20px;
 }
 
 .card-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  gap: 16px;
 }
 
 .card-title {
   font-size: 16px;
   font-weight: 600;
   color: #303133;
+  white-space: nowrap;
 }
 
 .chart-container {
   width: 100%;
   height: 300px;
+  flex: 1;
+  min-height: 300px;
+}
+
+@media (max-width: 768px) {
+  .card-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  .chart-container {
+    height: 250px;
+    min-height: 250px;
+  }
 }
 </style>

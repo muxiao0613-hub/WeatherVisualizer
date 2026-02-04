@@ -10,11 +10,12 @@
       </template>
     </el-skeleton>
 
-    <div v-else ref="chartRef" class="chart-container"></div>
-
-    <div v-if="!loading" class="aqi-info">
-      <div class="aqi-value">{{ aqi }}</div>
-      <div class="aqi-level" :class="aqiLevelClass">{{ aqiLevel }}</div>
+    <div v-else class="card-content">
+      <div ref="chartRef" class="chart-container"></div>
+      <div class="aqi-info">
+        <div class="aqi-value">{{ aqi }}</div>
+        <div class="aqi-level" :class="aqiLevelClass">{{ aqiLevel }}</div>
+      </div>
     </div>
   </el-card>
 </template>
@@ -34,6 +35,8 @@ const props = defineProps<Props>()
 
 const chartRef = ref<HTMLElement>()
 const chartInstance = ref<ECharts>()
+const isInitialized = ref(false)
+const retryCount = ref(0)
 
 const aqi = computed(() => {
   const value = props.weather?.aqi || 50
@@ -60,7 +63,18 @@ const aqiLevelClass = computed(() => {
 
 const initChart = () => {
   if (!chartRef.value) {
-    console.error('GaugeCard: chartRef is null')
+    console.warn('GaugeCard: chartRef is null, retrying...')
+    if (retryCount.value < 3) {
+      retryCount.value++
+      setTimeout(() => initChart(), 100)
+    }
+    return
+  }
+
+  const containerRect = chartRef.value.getBoundingClientRect()
+  if (containerRect.width === 0 || containerRect.height === 0) {
+    console.warn('GaugeCard: Container has zero size, waiting...')
+    setTimeout(() => initChart(), 200)
     return
   }
 
@@ -68,17 +82,23 @@ const initChart = () => {
     chartInstance.value.dispose()
   }
 
-  chartInstance.value = echarts.init(chartRef.value)
-  console.log('GaugeCard: Chart initialized')
+  try {
+    chartInstance.value = echarts.init(chartRef.value)
+    isInitialized.value = true
+    retryCount.value = 0
+    console.log('GaugeCard: Chart initialized successfully')
 
-  updateChart()
+    updateChart()
 
-  window.addEventListener('resize', handleResize)
+    window.addEventListener('resize', handleResize)
+  } catch (error) {
+    console.error('GaugeCard: Failed to initialize chart:', error)
+  }
 }
 
 const updateChart = () => {
-  if (!chartInstance.value) {
-    console.error('GaugeCard: chartInstance is null')
+  if (!isInitialized.value || !chartInstance.value) {
+    console.warn('GaugeCard: Chart not initialized, skipping update')
     return
   }
 
@@ -93,6 +113,8 @@ const updateChart = () => {
         min: 0,
         max: 300,
         splitNumber: 6,
+        radius: '90%',
+        center: ['50%', '55%'],
         itemStyle: {
           color: new echarts.graphic.LinearGradient(0, 0, 1, 0, [
             { offset: 0, color: '#67c23a' },
@@ -104,13 +126,13 @@ const updateChart = () => {
         progress: {
           show: true,
           roundCap: true,
-          width: 18
+          width: 16
         },
         pointer: {
           icon: 'path://M12.8,0.7l12,40.1H0.7L12.8,0.7z',
-          length: '12%',
-          width: 20,
-          offsetCenter: [0, '-60%'],
+          length: '10%',
+          width: 16,
+          offsetCenter: [0, '-55%'],
           itemStyle: {
             color: 'inherit'
           }
@@ -118,7 +140,7 @@ const updateChart = () => {
         axisLine: {
           roundCap: true,
           lineStyle: {
-            width: 18
+            width: 16
           }
         },
         axisTick: {
@@ -129,36 +151,22 @@ const updateChart = () => {
           }
         },
         splitLine: {
-          length: 12,
+          length: 10,
           lineStyle: {
-            width: 3,
+            width: 2,
             color: '#999'
           }
         },
         axisLabel: {
-          distance: 30,
+          distance: 25,
           color: '#999',
-          fontSize: 12
+          fontSize: 11
         },
         title: {
           show: false
         },
         detail: {
-          backgroundColor: '#fff',
-          borderColor: '#999',
-          borderWidth: 1,
-          width: '60%',
-          lineHeight: 40,
-          height: 40,
-          borderRadius: 8,
-          offsetCenter: [0, '35%'],
-          valueAnimation: true,
-          formatter: function (value: number) {
-            return Math.round(value).toString()
-          },
-          color: 'inherit',
-          fontSize: 20,
-          fontWeight: 600
+          show: false
         },
         data: [
           {
@@ -169,38 +177,61 @@ const updateChart = () => {
     ]
   }
 
-  chartInstance.value.setOption(option)
+  chartInstance.value.setOption(option, true)
   console.log('GaugeCard: Chart option set successfully')
 }
 
 const handleResize = () => {
-  chartInstance.value?.resize()
+  if (chartInstance.value && isInitialized.value) {
+    chartInstance.value.resize()
+  }
 }
 
 watch(() => props.weather, () => {
   console.log('GaugeCard: Weather data changed')
-  nextTick(() => {
-    updateChart()
-  })
+  if (!isInitialized.value && props.weather) {
+    nextTick(() => {
+      setTimeout(() => initChart(), 100)
+    })
+  } else if (isInitialized.value) {
+    nextTick(() => {
+      updateChart()
+    })
+  }
 }, { deep: true })
 
 onMounted(() => {
   console.log('GaugeCard: Component mounted')
   nextTick(() => {
-    initChart()
+    setTimeout(() => initChart(), 100)
   })
 })
 
 onBeforeUnmount(() => {
   console.log('GaugeCard: Component unmounting')
   window.removeEventListener('resize', handleResize)
-  chartInstance.value?.dispose()
+  if (chartInstance.value) {
+    chartInstance.value.dispose()
+    chartInstance.value = undefined
+  }
+  isInitialized.value = false
 })
 </script>
 
 <style scoped>
 .gauge-card {
   border-radius: 16px;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.gauge-card :deep(.el-card__body) {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  padding: 32px 28px;
+  min-height: 0;
 }
 
 .card-title {
@@ -209,29 +240,45 @@ onBeforeUnmount(() => {
   color: #303133;
 }
 
+.card-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 40px;
+  min-height: 0;
+}
+
 .chart-container {
   width: 100%;
-  height: 200px;
+  height: 220px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .aqi-info {
   text-align: center;
-  margin-top: 16px;
+  padding: 32px 20px 24px 20px;
+  border-top: 1px solid #f0f0f0;
+  flex-shrink: 0;
 }
 
 .aqi-value {
-  font-size: 32px;
+  font-size: 64px;
   font-weight: 700;
   color: #303133;
-  margin-bottom: 8px;
+  margin-bottom: 20px;
+  line-height: 1;
 }
 
 .aqi-level {
-  font-size: 14px;
-  font-weight: 500;
-  padding: 4px 12px;
-  border-radius: 12px;
+  font-size: 20px;
+  font-weight: 600;
+  padding: 12px 32px;
+  border-radius: 28px;
   display: inline-block;
+  letter-spacing: 0.5px;
 }
 
 .level-good { background: #f0f9ff; color: #67c23a; }
@@ -239,4 +286,60 @@ onBeforeUnmount(() => {
 .level-unhealthy { background: #fef0f0; color: #f56c6c; }
 .level-very-unhealthy { background: #fde2e2; color: #c0392b; }
 .level-hazardous { background: #e8d5d5; color: #8b0000; }
+
+@media (max-width: 1200px) {
+  .gauge-card :deep(.el-card__body) {
+    padding: 28px 24px;
+  }
+
+  .card-content {
+    gap: 32px;
+  }
+
+  .chart-container {
+    height: 200px;
+  }
+
+  .aqi-info {
+    padding: 28px 16px 20px 16px;
+  }
+
+  .aqi-value {
+    font-size: 56px;
+    margin-bottom: 18px;
+  }
+
+  .aqi-level {
+    font-size: 18px;
+    padding: 10px 28px;
+  }
+}
+
+@media (max-width: 768px) {
+  .gauge-card :deep(.el-card__body) {
+    padding: 24px 20px;
+  }
+
+  .card-content {
+    gap: 28px;
+  }
+
+  .chart-container {
+    height: 180px;
+  }
+
+  .aqi-info {
+    padding: 24px 12px 20px 12px;
+  }
+
+  .aqi-value {
+    font-size: 48px;
+    margin-bottom: 16px;
+  }
+
+  .aqi-level {
+    font-size: 16px;
+    padding: 10px 24px;
+  }
+}
 </style>

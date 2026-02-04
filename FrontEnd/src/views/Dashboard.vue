@@ -2,42 +2,42 @@
   <AppShell>
     <div class="dashboard">
       <el-row :gutter="24">
-        <el-col :span="24" v-if="preferenceStore.preferences.showCurrentCard">
+        <el-col :span="24" v-if="preferencesLoaded && preferenceStore.preferences.showCurrentCard">
           <CurrentWeatherCard
             :weather="weatherStore.currentWeather"
             :loading="weatherStore.loading"
           />
         </el-col>
 
-        <el-col :span="24" :lg="12" v-if="preferenceStore.preferences.showLineChart">
+        <el-col :span="24" :lg="12" v-if="preferencesLoaded && preferenceStore.preferences.showLineChart">
           <LineChartCard
             :data="weatherStore.hourlyForecast"
             :loading="weatherStore.loading"
           />
         </el-col>
 
-        <el-col :span="24" :lg="12" v-if="preferenceStore.preferences.showBarChart">
+        <el-col :span="24" :lg="12" v-if="preferencesLoaded && preferenceStore.preferences.showBarChart">
           <BarChartCard
             :data="weatherStore.dailyForecast"
             :loading="weatherStore.loading"
           />
         </el-col>
 
-        <el-col :span="24" :lg="8" v-if="preferenceStore.preferences.showGaugeCard">
+        <el-col :span="24" :lg="8" v-if="preferencesLoaded && preferenceStore.preferences.showGaugeCard">
           <GaugeCard
             :weather="weatherStore.currentWeather"
             :loading="weatherStore.loading"
           />
         </el-col>
 
-        <el-col :span="24" :lg="16" v-if="preferenceStore.preferences.showAlertsCard">
+        <el-col :span="24" :lg="16" v-if="preferencesLoaded && preferenceStore.preferences.showAlertsCard">
           <AlertsCard
             :alerts="weatherStore.alerts"
             :loading="weatherStore.loading"
           />
         </el-col>
 
-        <el-col :span="24" v-if="preferenceStore.preferences.showAiAssistant">
+        <el-col :span="24" v-if="preferencesLoaded && preferenceStore.preferences.showAiAssistant">
           <AiChatCard />
         </el-col>
       </el-row>
@@ -46,7 +46,7 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, watch } from 'vue'
+import { ref, onMounted, watch } from 'vue'
 import AppShell from '@/components/layout/AppShell.vue'
 import CurrentWeatherCard from '@/components/weather/CurrentWeatherCard.vue'
 import LineChartCard from '@/components/weather/LineChartCard.vue'
@@ -63,6 +63,7 @@ import { ElMessage } from 'element-plus'
 const weatherStore = useWeatherStore()
 const cityStore = useCityStore()
 const preferenceStore = usePreferenceStore()
+const preferencesLoaded = ref(false)
 
 const loadWeatherData = async () => {
   weatherStore.setLoading(true)
@@ -96,15 +97,18 @@ const loadPreferences = async () => {
   try {
     const preferences = await preferenceApi.getPreferences()
     preferenceStore.setPreferences(preferences)
+    preferencesLoaded.value = true
+    console.log('Preferences loaded successfully:', preferences)
   } catch (error) {
-    console.error('Failed to load preferences:', error)
+    console.error('Failed to load preferences, using defaults:', error)
+    preferencesLoaded.value = true
   }
 }
 
 onMounted(async () => {
   console.log('Dashboard mounted')
   await loadPreferences()
-  console.log('Preferences loaded:', preferenceStore.preferences)
+  console.log('Preferences loaded, ready to load weather data')
   await loadWeatherData()
   console.log('Weather data loaded:', {
     current: weatherStore.currentWeather,
@@ -115,6 +119,7 @@ onMounted(async () => {
 })
 
 watch(() => cityStore.currentCity, () => {
+  console.log('City changed, reloading weather data')
   loadWeatherData()
 }, { deep: true })
 </script>
@@ -122,9 +127,28 @@ watch(() => cityStore.currentCity, () => {
 <style scoped>
 .dashboard {
   padding: 0;
+  min-height: 100%;
+}
+
+.el-row {
+  margin: 0 !important;
 }
 
 .el-col {
   margin-bottom: 24px;
+  padding: 0 12px;
+}
+
+@media (max-width: 1200px) {
+  .el-col {
+    margin-bottom: 20px;
+  }
+}
+
+@media (max-width: 768px) {
+  .el-col {
+    margin-bottom: 16px;
+    padding: 0 8px;
+  }
 }
 </style>
