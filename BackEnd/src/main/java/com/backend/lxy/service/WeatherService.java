@@ -79,6 +79,6 @@ public class WeatherService {
     }
 
     private boolean shouldUseMock() {
-        return appProperties.isMockEnabled() || !weatherProperties.hasApiKey();
+        return appProperties.isMockEnabled() || (!weatherProperties.hasApiKey() && !weatherProperties.hasJwtConfig());
     }
 }

@@ -26,9 +26,15 @@ app:
   mock-enabled: ${APP_MOCK_ENABLED:}
 
 weather:
-  provider: ${WEATHER_PROVIDER:OPENWEATHER}
-  base-url: ${WEATHER_BASE_URL:}
-  api-key: ${WEATHER_API_KEY:}
+  provider: QWEATHER
+  base-url: "https://nm4bjaxp7y.re.qweatherapi.com/v7"
+  jwt:
+    project-id: "4A89P8CYNW"
+    credential-id: "KD5BDMKTNM"
+    private-key-pem: |
+      -----BEGIN PRIVATE KEY-----
+      MC4CAQAwBQYDK2VwBCIEIOuF62MNr2hSI/EIbxdeZwVrWtJriBf+kq9gxR4kTI0V
+      -----END PRIVATE KEY-----
 
 ai:
   qwen:

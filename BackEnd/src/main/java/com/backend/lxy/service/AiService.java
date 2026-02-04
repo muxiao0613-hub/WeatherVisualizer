@@ -27,7 +27,7 @@ public class AiService {
         String question = request.getQuestion();
 
         if (shouldUseMock()) {
-            log.debug("Using mock AI response");
+            log.info("🤖 Using mock AI response for city: {}, question: {}", city, question);
             String answer = mockDataFactory.mockAiResponse(question, city);
             return ChatResponseDTO.builder()
                     .answer(answer)
@@ -36,15 +36,17 @@ public class AiService {
         }
 
         try {
+            log.info("🔌 Calling Qwen API for city: {}, question: {}", city, question);
             String prompt = buildPrompt(question, city);
             String answer = qwenClient.chat(prompt);
+            log.info("✅ Qwen API response received successfully");
 
             return ChatResponseDTO.builder()
                     .answer(answer)
                     .references(Arrays.asList("Current weather", "Forecast data", "Weather alerts"))
                     .build();
         } catch (IOException e) {
-            log.warn("Failed to call Qwen API, falling back to mock: {}", e.getMessage());
+            log.warn("❌ Failed to call Qwen API, falling back to mock: {}", e.getMessage());
             String answer = mockDataFactory.mockAiResponse(question, city);
             return ChatResponseDTO.builder()
                     .answer(answer)
