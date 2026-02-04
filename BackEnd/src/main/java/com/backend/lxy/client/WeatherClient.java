@@ -72,7 +72,9 @@ public class WeatherClient {
                 .get();
 
         if ("QWEATHER".equalsIgnoreCase(weatherProperties.getProvider())) {
-            if (weatherProperties.hasJwtConfig()) {
+            if (weatherProperties.hasApiKey()) {
+                requestBuilder.addHeader("X-QW-Api-Key", weatherProperties.getApiKey());
+            } else if (weatherProperties.hasJwtConfig()) {
                 try {
                     String jwtToken = generateJwtToken();
                     requestBuilder.addHeader("Authorization", "Bearer " + jwtToken);
@@ -80,8 +82,6 @@ public class WeatherClient {
                     log.error("Failed to generate JWT token", e);
                     throw new IOException("Failed to generate JWT token", e);
                 }
-            } else if (weatherProperties.hasApiKey()) {
-                requestBuilder.addHeader("X-QW-Api-Key", weatherProperties.getApiKey());
             }
         }
 
@@ -92,19 +92,8 @@ public class WeatherClient {
         String url;
 
         if ("QWEATHER".equalsIgnoreCase(weatherProperties.getProvider())) {
-            String token = "";
-            if (weatherProperties.hasJwtConfig()) {
-                try {
-                    token = generateJwtToken();
-                } catch (Exception e) {
-                    log.error("Failed to generate JWT token", e);
-                    throw new IOException("Failed to generate JWT token", e);
-                }
-            } else if (weatherProperties.hasApiKey()) {
-                token = weatherProperties.getApiKey();
-            }
-            url = String.format("%s/weather/now?location=%s&token=%s",
-                    weatherProperties.getBaseUrl(), String.format("%.2f,%.2f", lon, lat), token);
+            url = String.format("%s/weather/now?location=%.2f,%.2f",
+                    weatherProperties.getBaseUrl(), lon, lat);
         } else {
             url = String.format("%s?lat=%s&lon=%s&appid=%s&units=metric",
                     weatherProperties.getBaseUrl(), lat, lon, weatherProperties.getApiKey());
@@ -168,19 +157,8 @@ public class WeatherClient {
         String url;
 
         if ("QWEATHER".equalsIgnoreCase(weatherProperties.getProvider())) {
-            String token = "";
-            if (weatherProperties.hasJwtConfig()) {
-                try {
-                    token = generateJwtToken();
-                } catch (Exception e) {
-                    log.error("Failed to generate JWT token", e);
-                    throw new IOException("Failed to generate JWT token", e);
-                }
-            } else if (weatherProperties.hasApiKey()) {
-                token = weatherProperties.getApiKey();
-            }
-            url = String.format("%s/weather/24h?location=%s&token=%s",
-                    weatherProperties.getBaseUrl(), String.format("%.2f,%.2f", lon, lat), token);
+            url = String.format("%s/weather/24h?location=%.2f,%.2f",
+                    weatherProperties.getBaseUrl(), lon, lat);
         } else {
             url = String.format("%s?lat=%s&lon=%s&appid=%s&units=metric",
                     weatherProperties.getBaseUrl(), lat, lon, weatherProperties.getApiKey());
@@ -248,19 +226,8 @@ public class WeatherClient {
         String url;
 
         if ("QWEATHER".equalsIgnoreCase(weatherProperties.getProvider())) {
-            String token = "";
-            if (weatherProperties.hasJwtConfig()) {
-                try {
-                    token = generateJwtToken();
-                } catch (Exception e) {
-                    log.error("Failed to generate JWT token", e);
-                    throw new IOException("Failed to generate JWT token", e);
-                }
-            } else if (weatherProperties.hasApiKey()) {
-                token = weatherProperties.getApiKey();
-            }
-            url = String.format("%s/weather/7d?location=%s&token=%s",
-                    weatherProperties.getBaseUrl(), String.format("%.2f,%.2f", lon, lat), token);
+            url = String.format("%s/weather/7d?location=%.2f,%.2f",
+                    weatherProperties.getBaseUrl(), lon, lat);
         } else {
             url = String.format("%s?lat=%s&lon=%s&appid=%s&units=metric",
                     weatherProperties.getBaseUrl(), lat, lon, weatherProperties.getApiKey());
@@ -328,19 +295,8 @@ public class WeatherClient {
         String url;
 
         if ("QWEATHER".equalsIgnoreCase(weatherProperties.getProvider())) {
-            String token = "";
-            if (weatherProperties.hasJwtConfig()) {
-                try {
-                    token = generateJwtToken();
-                } catch (Exception e) {
-                    log.error("Failed to generate JWT token", e);
-                    throw new IOException("Failed to generate JWT token", e);
-                }
-            } else if (weatherProperties.hasApiKey()) {
-                token = weatherProperties.getApiKey();
-            }
-            url = String.format("%s/warning/1d?location=%s&token=%s",
-                    weatherProperties.getBaseUrl(), String.format("%.2f,%.2f", lon, lat), token);
+            url = String.format("%s/warning/1d?location=%.2f,%.2f",
+                    weatherProperties.getBaseUrl(), lon, lat);
         } else {
             url = String.format("%s?lat=%s&lon=%s&appid=%s&units=metric",
                     weatherProperties.getBaseUrl(), lat, lon, weatherProperties.getApiKey());

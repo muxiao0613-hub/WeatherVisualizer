@@ -12,8 +12,6 @@ import java.util.Random;
 @Component
 public class MockDataFactory {
 
-    private static final Random random = new Random();
-
     private static final String[] CITIES = {"Beijing", "Shanghai", "Guangzhou", "Shenzhen", "Chengdu",
             "Hangzhou", "Wuhan", "Xi'an", "Nanjing", "Tianjin", "Chongqing", "Suzhou",
             "New York", "London", "Tokyo", "Paris", "Sydney", "Moscow", "Berlin", "Rome"};
@@ -21,7 +19,13 @@ public class MockDataFactory {
     private static final String[] DESCRIPTIONS = {"晴朗", "多云", "阴天", "小雨", "中雨", "雷阵雨", "雾", "霾"};
     private static final String[] ICONS = {"01d", "02d", "03d", "10d", "10d", "11d", "50d", "50d"};
 
+    private Random getRandomForCity(String city) {
+        long seed = city.hashCode();
+        return new Random(seed);
+    }
+
     public CurrentWeatherDTO mockCurrentWeather(String city, Double lat, Double lon) {
+        Random random = getRandomForCity(city);
         int baseTemp = 15 + random.nextInt(20);
         return CurrentWeatherDTO.builder()
                 .city(city)
@@ -45,6 +49,7 @@ public class MockDataFactory {
     public List<HourlyForecastDTO> mockHourlyForecast(String city, Double lat, Double lon) {
         List<HourlyForecastDTO> forecasts = new ArrayList<>();
         LocalDateTime now = LocalDateTime.now();
+        Random random = getRandomForCity(city);
         int baseTemp = 15 + random.nextInt(20);
 
         for (int i = 0; i < 24; i++) {
@@ -72,6 +77,7 @@ public class MockDataFactory {
     public List<DailyForecastDTO> mockDailyForecast(String city, Double lat, Double lon) {
         List<DailyForecastDTO> forecasts = new ArrayList<>();
         LocalDate today = LocalDate.now();
+        Random random = getRandomForCity(city);
         int baseTemp = 15 + random.nextInt(20);
 
         for (int i = 0; i < 7; i++) {
@@ -97,21 +103,25 @@ public class MockDataFactory {
 
     public List<AlertDTO> mockAlerts(String city, Double lat, Double lon) {
         List<AlertDTO> alerts = new ArrayList<>();
+        Random random = getRandomForCity(city);
+        LocalDateTime now = LocalDateTime.now();
+        String[] alertTypes = {"高温预警", "暴雨预警", "大风预警", "雾霾预警", "雷电预警", "寒潮预警", "台风预警"};
+        String[] levels = {"黄色", "橙色", "红色"};
 
-        if (random.nextInt(10) > 7) {
-            LocalDateTime now = LocalDateTime.now();
-            String[] alertTypes = {"高温预警", "暴雨预警", "大风预警", "雾霾预警", "雷电预警"};
-            String[] levels = {"黄色", "橙色", "红色"};
-
+        int alertCount = 1 + random.nextInt(2);
+        for (int i = 0; i < alertCount; i++) {
+            String alertType = alertTypes[random.nextInt(alertTypes.length)];
+            String level = levels[random.nextInt(levels.length)];
+            
             alerts.add(AlertDTO.builder()
                     .city(city)
                     .lat(lat != null ? lat : 39.9042 + random.nextDouble() * 0.1)
                     .lon(lon != null ? lon : 116.4074 + random.nextDouble() * 0.1)
-                    .event(alertTypes[random.nextInt(alertTypes.length)])
-                    .description("预计未来24小时内可能出现" + alertTypes[random.nextInt(alertTypes.length)] + "，请注意防范。")
+                    .event(alertType)
+                    .description("预计未来24小时内可能出现" + alertType + "（" + level + "），请注意防范。建议减少户外活动，做好防护措施。")
                     .start(now)
                     .end(now.plusHours(24))
-                    .level(levels[random.nextInt(levels.length)])
+                    .level(level)
                     .tags("weather,warning")
                     .build());
         }
@@ -120,6 +130,7 @@ public class MockDataFactory {
     }
 
     public String mockAiResponse(String question, String city) {
+        Random random = getRandomForCity(city + question);
         String[] responses = {
                 "根据" + city + "当前的天气情况，建议您外出时携带雨具，注意保暖。",
                 city + "未来几天气温变化较大，建议您根据天气变化适时增减衣物。",
@@ -133,6 +144,7 @@ public class MockDataFactory {
 
     public List<CityDTO> searchCities(String keyword) {
         List<CityDTO> results = new ArrayList<>();
+        Random random = getRandomForCity(keyword);
 
         for (String city : CITIES) {
             if (city.toLowerCase().contains(keyword.toLowerCase())) {

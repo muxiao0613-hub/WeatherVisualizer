@@ -23,11 +23,12 @@ spring:
         format_sql: true
 
 app:
-  mock-enabled: ${APP_MOCK_ENABLED:}
+  mock-enabled: false
 
 weather:
   provider: QWEATHER
-  base-url: "https://nm4bjaxp7y.re.qweatherapi.com/v7"
+  base-url: "https://devapi.qweather.com/v7"
+  api-key: "YOUR_QWEATHER_API_KEY"
   jwt:
     project-id: "4A89P8CYNW"
     credential-id: "KD5BDMKTNM"
