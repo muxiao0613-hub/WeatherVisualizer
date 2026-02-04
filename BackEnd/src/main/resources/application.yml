@@ -1,0 +1,44 @@
+server:
+  port: ${APP_PORT:8080}
+
+spring:
+  application:
+    name: weather-visualizer
+  h2:
+    console:
+      enabled: true
+      path: /h2-console
+  datasource:
+    url: jdbc:h2:mem:weatherdb;MODE=MYSQL;DB_CLOSE_DELAY=-1
+    driver-class-name: org.h2.Driver
+    username: sa
+    password:
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: false
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.H2Dialect
+        format_sql: true
+
+app:
+  mock-enabled: ${APP_MOCK_ENABLED:}
+
+weather:
+  provider: ${WEATHER_PROVIDER:OPENWEATHER}
+  base-url: ${WEATHER_BASE_URL:}
+  api-key: ${WEATHER_API_KEY:}
+
+ai:
+  qwen:
+    api-key: "sk-6a1a3c1f131f4c04bb22379f8482b152"
+    model: qwen-turbo
+    base-url: https://dashscope.aliyuncs.com/compatible-mode/v1
+
+springdoc:
+  api-docs:
+    path: /api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+    enabled: true
