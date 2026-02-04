@@ -26,7 +26,7 @@
       <div class="main-info">
         <div class="temperature">
           <span class="temp-value">{{ formatTemp(weather.temp) }}</span>
-          <span class="temp-unit">{{ temperatureUnit }}</span>
+          <span class="temp-unit">°{{ temperatureUnit }}</span>
         </div>
         <div class="description">
           <span class="weather-desc">{{ weather.description }}</span>
@@ -43,24 +43,24 @@
         </el-col>
         <el-col :span="8" class="detail-item">
           <div class="detail-label">湿度</div>
-          <div class="detail-value">{{ weather.humidity.toFixed(3) }}%</div>
+          <div class="detail-value">{{ Math.round(weather.humidity) }}%</div>
         </el-col>
         <el-col :span="8" class="detail-item">
           <div class="detail-label">气压</div>
-          <div class="detail-value">{{ weather.pressure.toFixed(3) }}hPa</div>
+          <div class="detail-value">{{ Math.round(weather.pressure) }}hPa</div>
         </el-col>
         <el-col :span="8" class="detail-item">
           <div class="detail-label">能见度</div>
-          <div class="detail-value">{{ weather.visibility.toFixed(3) }}km</div>
+          <div class="detail-value">{{ Math.round(weather.visibility * 10) / 10 }}km</div>
         </el-col>
         <el-col :span="8" class="detail-item">
           <div class="detail-label">风向</div>
-          <div class="detail-value">{{ weather.windDeg.toFixed(3) }}°</div>
+          <div class="detail-value">{{ Math.round(weather.windDeg) }}°</div>
         </el-col>
         <el-col :span="8" class="detail-item">
           <div class="detail-label">AQI</div>
           <div class="detail-value" :class="getAqiClass(weather.aqi || 0)">
-            {{ weather.aqi ? weather.aqi.toFixed(3) : '-' }}
+            {{ weather.aqi ? Math.round(weather.aqi) : '-' }}
           </div>
         </el-col>
       </el-row>
@@ -88,27 +88,31 @@ const temperatureUnit = computed(() => preferenceStore.preferences.temperatureUn
 const windSpeedUnit = computed(() => preferenceStore.preferences.windSpeedUnit)
 
 const updateTime = computed(() => {
+  if (!props.weather?.timestamp) return '-'
   return dayjs.unix(props.weather.timestamp).format('HH:mm')
 })
 
 const formatTemp = (temp: number) => {
+  const numTemp = Number(temp)
   if (temperatureUnit.value === 'F') {
-    return ((temp * 9/5) + 32).toFixed(3)
+    return Math.round((numTemp * 9/5) + 32)
   }
-  return temp.toFixed(3)
+  return Math.round(numTemp)
 }
 
 const formatWindSpeed = (speed: number) => {
+  const numSpeed = Number(speed)
   if (windSpeedUnit.value === 'km/h') {
-    return (speed * 3.6).toFixed(3)
+    return Math.round(numSpeed * 3.6 * 10) / 10
   }
-  return speed.toFixed(3)
+  return Math.round(numSpeed * 10) / 10
 }
 
 const getAqiClass = (aqi: number) => {
-  if (aqi <= 50) return 'aqi-good'
-  if (aqi <= 100) return 'aqi-moderate'
-  if (aqi <= 150) return 'aqi-unhealthy'
+  const numAqi = Number(aqi)
+  if (numAqi <= 50) return 'aqi-good'
+  if (numAqi <= 100) return 'aqi-moderate'
+  if (numAqi <= 150) return 'aqi-unhealthy'
   return 'aqi-very-unhealthy'
 }
 </script>

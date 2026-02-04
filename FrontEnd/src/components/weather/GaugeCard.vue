@@ -35,7 +35,10 @@ const props = defineProps<Props>()
 const chartRef = ref<HTMLElement>()
 const chartInstance = ref<ECharts>()
 
-const aqi = computed(() => props.weather?.aqi || 50)
+const aqi = computed(() => {
+  const value = props.weather?.aqi || 50
+  return Math.round(Number(value))
+})
 
 const aqiLevel = computed(() => {
   const value = aqi.value
@@ -56,16 +59,30 @@ const aqiLevelClass = computed(() => {
 })
 
 const initChart = () => {
-  if (!chartRef.value) return
+  if (!chartRef.value) {
+    console.error('GaugeCard: chartRef is null')
+    return
+  }
+
+  if (chartInstance.value) {
+    chartInstance.value.dispose()
+  }
 
   chartInstance.value = echarts.init(chartRef.value)
+  console.log('GaugeCard: Chart initialized')
+
   updateChart()
 
   window.addEventListener('resize', handleResize)
 }
 
 const updateChart = () => {
-  if (!chartInstance.value) return
+  if (!chartInstance.value) {
+    console.error('GaugeCard: chartInstance is null')
+    return
+  }
+
+  console.log('GaugeCard: Updating chart with AQI:', aqi.value)
 
   const option = {
     series: [
@@ -77,19 +94,12 @@ const updateChart = () => {
         max: 300,
         splitNumber: 6,
         itemStyle: {
-          color: {
-            type: 'linear',
-            x: 0,
-            y: 0,
-            x2: 1,
-            y2: 0,
-            colorStops: [
-              { offset: 0, color: '#67c23a' },
-              { offset: 0.33, color: '#e6a23c' },
-              { offset: 0.66, color: '#f56c6c' },
-              { offset: 1, color: '#8b0000' }
-            ]
-          }
+          color: new echarts.graphic.LinearGradient(0, 0, 1, 0, [
+            { offset: 0, color: '#67c23a' },
+            { offset: 0.33, color: '#e6a23c' },
+            { offset: 0.66, color: '#f56c6c' },
+            { offset: 1, color: '#8b0000' }
+          ])
         },
         progress: {
           show: true,
@@ -144,7 +154,7 @@ const updateChart = () => {
           offsetCenter: [0, '35%'],
           valueAnimation: true,
           formatter: function (value: number) {
-            return value.toFixed(3)
+            return Math.round(value).toString()
           },
           color: 'inherit',
           fontSize: 20,
@@ -160,6 +170,7 @@ const updateChart = () => {
   }
 
   chartInstance.value.setOption(option)
+  console.log('GaugeCard: Chart option set successfully')
 }
 
 const handleResize = () => {
@@ -167,18 +178,21 @@ const handleResize = () => {
 }
 
 watch(() => props.weather, () => {
+  console.log('GaugeCard: Weather data changed')
   nextTick(() => {
     updateChart()
   })
 }, { deep: true })
 
 onMounted(() => {
+  console.log('GaugeCard: Component mounted')
   nextTick(() => {
     initChart()
   })
 })
 
 onBeforeUnmount(() => {
+  console.log('GaugeCard: Component unmounting')
   window.removeEventListener('resize', handleResize)
   chartInstance.value?.dispose()
 })

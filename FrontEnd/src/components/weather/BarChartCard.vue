@@ -41,16 +41,38 @@ const chartInstance = ref<ECharts>()
 const activeTab = ref('temp')
 
 const initChart = () => {
-  if (!chartRef.value) return
+  if (!chartRef.value) {
+    console.error('BarChartCard: chartRef is null')
+    return
+  }
+
+  if (chartInstance.value) {
+    chartInstance.value.dispose()
+  }
 
   chartInstance.value = echarts.init(chartRef.value)
-  updateChart()
+  console.log('BarChartCard: Chart initialized')
+
+  if (props.data.length > 0) {
+    updateChart()
+  }
 
   window.addEventListener('resize', handleResize)
 }
 
 const updateChart = () => {
-  if (!chartInstance.value || !props.data.length) return
+  if (!chartInstance.value) {
+    console.error('BarChartCard: chartInstance is null')
+    return
+  }
+
+  if (!props.data || props.data.length === 0) {
+    console.warn('BarChartCard: No data available')
+    chartInstance.value.clear()
+    return
+  }
+
+  console.log('BarChartCard: Updating chart with', props.data.length, 'data points')
 
   const dates = props.data.map(item => dayjs(item.date).format('MM-DD'))
   const unit = preferenceStore.preferences.temperatureUnit
@@ -60,18 +82,6 @@ const updateChart = () => {
       trigger: 'axis',
       axisPointer: {
         type: 'shadow'
-      },
-      formatter: (params: any) => {
-        const result = params.map((param: any) => {
-          let value = param.value
-          if (activeTab.value === 'temp') {
-            value = param.value.toFixed(3)
-          } else if (activeTab.value === 'pop') {
-            value = (param.value * 100).toFixed(3)
-          }
-          return `${param.marker} ${param.seriesName}: ${value}${activeTab.value === 'temp' ? '°' : '%'}`
-        })
-        return `${params[0].name}<br/>${result.join('<br/>')}`
       }
     },
     legend: {
@@ -110,10 +120,7 @@ const updateChart = () => {
         color: '#909399',
         fontSize: 12,
         formatter: (value: number) => {
-          if (activeTab.value === 'temp') {
-            return `${value.toFixed(3)}°`
-          }
-          return `${value.toFixed(3)}%`
+          return activeTab.value === 'temp' ? `${Math.round(value)}°` : `${Math.round(value)}%`
         }
       },
       splitLine: {
@@ -127,10 +134,11 @@ const updateChart = () => {
         name: '最低温度',
         type: 'bar',
         data: props.data.map(item => {
+          const temp = Number(item.tempMin)
           if (unit === 'F') {
-            return parseFloat(((item.tempMin * 9/5) + 32).toFixed(3))
+            return Math.round((temp * 9/5) + 32)
           }
-          return parseFloat(item.tempMin.toFixed(3))
+          return Math.round(temp)
         }),
         itemStyle: {
           color: '#91cc75'
@@ -140,10 +148,11 @@ const updateChart = () => {
         name: '最高温度',
         type: 'bar',
         data: props.data.map(item => {
+          const temp = Number(item.tempMax)
           if (unit === 'F') {
-            return parseFloat(((item.tempMax * 9/5) + 32).toFixed(3))
+            return Math.round((temp * 9/5) + 32)
           }
-          return parseFloat(item.tempMax.toFixed(3))
+          return Math.round(temp)
         }),
         itemStyle: {
           color: '#ee6666'
@@ -153,25 +162,19 @@ const updateChart = () => {
       {
         name: '降水概率',
         type: 'bar',
-        data: props.data.map(item => parseFloat((item.pop * 100).toFixed(3))),
+        data: props.data.map(item => Math.round(Number(item.pop) * 100)),
         itemStyle: {
-          color: {
-            type: 'linear',
-            x: 0,
-            y: 0,
-            x2: 0,
-            y2: 1,
-            colorStops: [
-              { offset: 0, color: '#5470c6' },
-              { offset: 1, color: '#91cc75' }
-            ]
-          }
+          color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+            { offset: 0, color: '#5470c6' },
+            { offset: 1, color: '#91cc75' }
+          ])
         }
       }
     ]
   }
 
   chartInstance.value.setOption(option)
+  console.log('BarChartCard: Chart option set successfully')
 }
 
 const handleResize = () => {
@@ -179,22 +182,26 @@ const handleResize = () => {
 }
 
 watch(activeTab, () => {
+  console.log('BarChartCard: Active tab changed to', activeTab.value)
   updateChart()
 })
 
-watch(() => props.data, () => {
+watch(() => props.data, (newData) => {
+  console.log('BarChartCard: Data changed, length:', newData?.length)
   nextTick(() => {
     updateChart()
   })
 }, { deep: true })
 
 onMounted(() => {
+  console.log('BarChartCard: Component mounted')
   nextTick(() => {
     initChart()
   })
 })
 
 onBeforeUnmount(() => {
+  console.log('BarChartCard: Component unmounting')
   window.removeEventListener('resize', handleResize)
   chartInstance.value?.dispose()
 })

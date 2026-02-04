@@ -42,118 +42,83 @@ const chartInstance = ref<ECharts>()
 const activeTab = ref('temperature')
 
 const initChart = () => {
-  console.log('LineChartCard initChart called', {
-    chartRef: !!chartRef.value,
-    chartRefElement: chartRef.value,
-    chartRefWidth: chartRef.value?.offsetWidth,
-    chartRefHeight: chartRef.value?.offsetHeight,
-    parentElement: chartRef.value?.parentElement,
-    parentWidth: chartRef.value?.parentElement?.offsetWidth,
-    parentHeight: chartRef.value?.parentElement?.offsetHeight,
-    hasData: props.data.length > 0,
-    existingInstance: !!chartInstance.value
-  })
-
-  if (!chartRef.value) return
+  if (!chartRef.value) {
+    console.error('LineChartCard: chartRef is null')
+    return
+  }
 
   if (chartInstance.value) {
     chartInstance.value.dispose()
-    chartInstance.value = undefined
-    console.log('LineChartCard: Old ECharts instance disposed')
   }
 
-  nextTick(() => {
-    chartInstance.value = echarts.init(chartRef.value, null, { renderer: 'canvas' })
-    console.log('LineChartCard: ECharts instance created', !!chartInstance.value)
-    const domElement = chartInstance.value.getDom()
-    const firstChild = domElement?.children?.[0]
-    console.log('LineChartCard: ECharts instance details', {
-      id: chartInstance.value.id,
-      group: chartInstance.value.group,
-      width: chartInstance.value.getWidth(),
-      height: chartInstance.value.getHeight(),
-      dom: domElement,
-      domChildren: domElement?.children?.length,
-      domChildrenArray: Array.from(domElement?.children || []).map(child => ({
-        tagName: child.tagName,
-        className: child.className,
-        innerHTML: child.innerHTML?.substring(0, 100),
-        childCount: child.children?.length,
-        childTags: Array.from(child.children || []).map(c => c.tagName)
-      })),
-      zr: chartInstance.value.getZr(),
-      zrPainter: chartInstance.value.getZr()?.painter,
-      zrPainterType: chartInstance.value.getZr()?.painter?.type,
-      firstChildCanvas: firstChild?.querySelector('canvas'),
-      firstChildCanvasCount: firstChild?.querySelectorAll('canvas')?.length
-    })
+  chartInstance.value = echarts.init(chartRef.value)
+  console.log('LineChartCard: Chart initialized')
 
-    if (props.data.length > 0) {
-      updateChart()
-    }
+  if (props.data.length > 0) {
+    updateChart()
+  }
 
-    window.addEventListener('resize', handleResize)
-  })
+  window.addEventListener('resize', handleResize)
 }
 
 const updateChart = () => {
-  console.log('LineChartCard updateChart called', {
-    chartInstance: !!chartInstance.value,
-    dataLength: props.data.length,
-    activeTab: activeTab.value
-  })
+  if (!chartInstance.value) {
+    console.error('LineChartCard: chartInstance is null')
+    return
+  }
 
-  if (!chartInstance.value) return
-
-  if (!props.data.length) {
-    console.log('LineChartCard: No data, clearing chart')
+  if (!props.data || props.data.length === 0) {
+    console.warn('LineChartCard: No data available')
     chartInstance.value.clear()
     return
   }
 
-  console.log('LineChartCard: Updating chart with', props.data.length, 'items')
+  console.log('LineChartCard: Updating chart with', props.data.length, 'data points')
 
   const times = props.data.map(item => dayjs(item.time).format('HH:mm'))
   let values: number[] = []
   let unit = ''
+  let seriesName = ''
 
   switch (activeTab.value) {
     case 'temperature':
       values = props.data.map(item => {
+        const temp = Number(item.temp)
         if (preferenceStore.preferences.temperatureUnit === 'F') {
-          return parseFloat(((item.temp * 9/5) + 32).toFixed(3))
+          return Math.round((temp * 9/5) + 32)
         }
-        return parseFloat(item.temp.toFixed(3))
+        return Math.round(temp)
       })
-      unit = preferenceStore.preferences.temperatureUnit
+      unit = '°' + preferenceStore.preferences.temperatureUnit
+      seriesName = '温度'
       break
     case 'humidity':
-      values = props.data.map(item => parseFloat(item.humidity.toFixed(3)))
+      values = props.data.map(item => Math.round(Number(item.humidity)))
       unit = '%'
+      seriesName = '湿度'
       break
     case 'windSpeed':
       values = props.data.map(item => {
+        const speed = Number(item.windSpeed)
         if (preferenceStore.preferences.windSpeedUnit === 'km/h') {
-          return parseFloat((item.windSpeed * 3.6).toFixed(3))
+          return Math.round(speed * 3.6 * 10) / 10
         }
-        return parseFloat(item.windSpeed.toFixed(3))
+        return Math.round(speed * 10) / 10
       })
       unit = preferenceStore.preferences.windSpeedUnit
+      seriesName = '风速'
       break
   }
 
-  console.log('LineChartCard: Data details', {
-    times: times,
-    values: values,
-    unit: unit,
-    activeTab: activeTab.value,
-    firstItem: props.data[0],
-    lastItem: props.data[props.data.length - 1]
-  })
+  console.log('LineChartCard: Chart data:', { times, values, unit, seriesName })
 
   const option = {
     tooltip: {
-      trigger: 'axis'
+      trigger: 'axis',
+      formatter: (params: any) => {
+        const param = params[0]
+        return `${param.name}<br/>${param.seriesName}: ${param.value}${unit}`
+      }
     },
     grid: {
       left: '3%',
@@ -165,52 +130,64 @@ const updateChart = () => {
     xAxis: {
       type: 'category',
       boundaryGap: false,
-      data: times
+      data: times,
+      axisLine: {
+        lineStyle: {
+          color: '#e4e7ed'
+        }
+      },
+      axisLabel: {
+        color: '#909399',
+        fontSize: 12
+      }
     },
     yAxis: {
-      type: 'value'
+      type: 'value',
+      axisLine: {
+        show: false
+      },
+      axisTick: {
+        show: false
+      },
+      axisLabel: {
+        color: '#909399',
+        fontSize: 12,
+        formatter: `{value}${unit}`
+      },
+      splitLine: {
+        lineStyle: {
+          color: '#f5f7fa'
+        }
+      }
     },
     series: [
       {
-        name: activeTab.value === 'temperature' ? '温度' : activeTab.value === 'humidity' ? '湿度' : '风速',
+        name: seriesName,
         type: 'line',
         smooth: true,
-        data: values
+        data: values,
+        lineStyle: {
+          width: 3,
+          color: new echarts.graphic.LinearGradient(0, 0, 1, 0, [
+            { offset: 0, color: '#667eea' },
+            { offset: 1, color: '#764ba2' }
+          ])
+        },
+        areaStyle: {
+          color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+            { offset: 0, color: 'rgba(102, 126, 234, 0.3)' },
+            { offset: 1, color: 'rgba(118, 75, 162, 0.05)' }
+          ])
+        },
+        itemStyle: {
+          color: '#667eea'
+        }
       }
     ]
   }
-  
-  console.log('LineChartCard: Chart option details', {
-    option: option,
-    timesLength: times.length,
-    valuesLength: values.length,
-    hasValidData: values.every(v => typeof v === 'number' && !isNaN(v))
-  })
 
   chartInstance.value.setOption(option)
-  console.log('LineChartCard: Chart option set', option)
-  console.log('LineChartCard: Chart instance state', {
-    width: chartInstance.value.getWidth(),
-    height: chartInstance.value.getHeight()
-  })
-  
-  console.log('LineChartCard: DOM element state', {
-    chartRef: chartRef.value,
-    chartRefWidth: chartRef.value?.offsetWidth,
-    chartRefHeight: chartRef.value?.offsetHeight,
-    chartRefDisplay: window.getComputedStyle(chartRef.value).display,
-    chartRefVisibility: window.getComputedStyle(chartRef.value).visibility,
-    chartRefOpacity: window.getComputedStyle(chartRef.value).opacity,
-    parentElement: chartRef.value?.parentElement,
-    parentDisplay: chartRef.value?.parentElement ? window.getComputedStyle(chartRef.value.parentElement).display : null
-  })
-  
-  console.log('LineChartCard: Canvas element', {
-    canvas: chartRef.value?.querySelector('canvas'),
-    canvasWidth: chartRef.value?.querySelector('canvas')?.width,
-    canvasHeight: chartRef.value?.querySelector('canvas')?.height,
-    canvasDisplay: chartRef.value?.querySelector('canvas') ? window.getComputedStyle(chartRef.value.querySelector('canvas')).display : null
-  })
+  console.log('LineChartCard: Chart option set successfully')
 }
 
 const handleResize = () => {
@@ -218,22 +195,26 @@ const handleResize = () => {
 }
 
 watch(activeTab, () => {
+  console.log('LineChartCard: Active tab changed to', activeTab.value)
   updateChart()
 })
 
-watch(() => props.data, () => {
+watch(() => props.data, (newData) => {
+  console.log('LineChartCard: Data changed, length:', newData?.length)
   nextTick(() => {
     updateChart()
   })
 }, { deep: true })
 
 onMounted(() => {
+  console.log('LineChartCard: Component mounted')
   nextTick(() => {
     initChart()
   })
 })
 
 onBeforeUnmount(() => {
+  console.log('LineChartCard: Component unmounting')
   window.removeEventListener('resize', handleResize)
   chartInstance.value?.dispose()
 })
