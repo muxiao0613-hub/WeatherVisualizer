@@ -77,12 +77,19 @@ const updateChart = () => {
         max: 300,
         splitNumber: 6,
         itemStyle: {
-          color: new echarts.graphic.LinearGradient(0, 0, 1, 0, [
-            { offset: 0, color: '#67c23a' },
-            { offset: 0.33, color: '#e6a23c' },
-            { offset: 0.66, color: '#f56c6c' },
-            { offset: 1, color: '#8b0000' }
-          ])
+          color: {
+            type: 'linear',
+            x: 0,
+            y: 0,
+            x2: 1,
+            y2: 0,
+            colorStops: [
+              { offset: 0, color: '#67c23a' },
+              { offset: 0.33, color: '#e6a23c' },
+              { offset: 0.66, color: '#f56c6c' },
+              { offset: 1, color: '#8b0000' }
+            ]
+          }
         },
         progress: {
           show: true,
@@ -137,7 +144,7 @@ const updateChart = () => {
           offsetCenter: [0, '35%'],
           valueAnimation: true,
           formatter: function (value: number) {
-            return Math.round(value)
+            return value.toFixed(3)
           },
           color: 'inherit',
           fontSize: 20,

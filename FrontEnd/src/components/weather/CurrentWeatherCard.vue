@@ -43,24 +43,24 @@
         </el-col>
         <el-col :span="8" class="detail-item">
           <div class="detail-label">湿度</div>
-          <div class="detail-value">{{ weather.humidity }}%</div>
+          <div class="detail-value">{{ weather.humidity.toFixed(3) }}%</div>
         </el-col>
         <el-col :span="8" class="detail-item">
           <div class="detail-label">气压</div>
-          <div class="detail-value">{{ weather.pressure }}hPa</div>
+          <div class="detail-value">{{ weather.pressure.toFixed(3) }}hPa</div>
         </el-col>
         <el-col :span="8" class="detail-item">
           <div class="detail-label">能见度</div>
-          <div class="detail-value">{{ weather.visibility }}km</div>
+          <div class="detail-value">{{ weather.visibility.toFixed(3) }}km</div>
         </el-col>
         <el-col :span="8" class="detail-item">
           <div class="detail-label">风向</div>
-          <div class="detail-value">{{ weather.windDeg }}°</div>
+          <div class="detail-value">{{ weather.windDeg.toFixed(3) }}°</div>
         </el-col>
         <el-col :span="8" class="detail-item">
           <div class="detail-label">AQI</div>
           <div class="detail-value" :class="getAqiClass(weather.aqi || 0)">
-            {{ weather.aqi || '-' }}
+            {{ weather.aqi ? weather.aqi.toFixed(3) : '-' }}
           </div>
         </el-col>
       </el-row>
@@ -93,16 +93,16 @@ const updateTime = computed(() => {
 
 const formatTemp = (temp: number) => {
   if (temperatureUnit.value === 'F') {
-    return Math.round((temp * 9/5) + 32)
+    return ((temp * 9/5) + 32).toFixed(3)
   }
-  return Math.round(temp)
+  return temp.toFixed(3)
 }
 
 const formatWindSpeed = (speed: number) => {
   if (windSpeedUnit.value === 'km/h') {
-    return (speed * 3.6).toFixed(1)
+    return (speed * 3.6).toFixed(3)
   }
-  return speed.toFixed(1)
+  return speed.toFixed(3)
 }
 
 const getAqiClass = (aqi: number) => {

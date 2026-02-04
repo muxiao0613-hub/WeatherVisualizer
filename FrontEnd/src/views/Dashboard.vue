@@ -78,6 +78,7 @@ const loadWeatherData = async () => {
       weatherApi.getAlerts(city.lat, city.lon, city.name)
     ])
 
+    console.log('Received weather data:', { current, hourly: hourly.length, daily: daily.length, alerts: alerts.length })
     weatherStore.setCurrentWeather(current)
     weatherStore.setHourlyForecast(hourly)
     weatherStore.setDailyForecast(daily)
@@ -101,8 +102,16 @@ const loadPreferences = async () => {
 }
 
 onMounted(async () => {
+  console.log('Dashboard mounted')
   await loadPreferences()
+  console.log('Preferences loaded:', preferenceStore.preferences)
   await loadWeatherData()
+  console.log('Weather data loaded:', {
+    current: weatherStore.currentWeather,
+    hourly: weatherStore.hourlyForecast.length,
+    daily: weatherStore.dailyForecast.length,
+    alerts: weatherStore.alerts.length
+  })
 })
 
 watch(() => cityStore.currentCity, () => {

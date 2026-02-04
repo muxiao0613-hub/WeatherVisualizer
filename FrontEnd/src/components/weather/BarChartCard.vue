@@ -60,6 +60,18 @@ const updateChart = () => {
       trigger: 'axis',
       axisPointer: {
         type: 'shadow'
+      },
+      formatter: (params: any) => {
+        const result = params.map((param: any) => {
+          let value = param.value
+          if (activeTab.value === 'temp') {
+            value = param.value.toFixed(3)
+          } else if (activeTab.value === 'pop') {
+            value = (param.value * 100).toFixed(3)
+          }
+          return `${param.marker} ${param.seriesName}: ${value}${activeTab.value === 'temp' ? '°' : '%'}`
+        })
+        return `${params[0].name}<br/>${result.join('<br/>')}`
       }
     },
     legend: {
@@ -98,7 +110,10 @@ const updateChart = () => {
         color: '#909399',
         fontSize: 12,
         formatter: (value: number) => {
-          return activeTab.value === 'temp' ? `${value}°` : `${value}%`
+          if (activeTab.value === 'temp') {
+            return `${value.toFixed(3)}°`
+          }
+          return `${value.toFixed(3)}%`
         }
       },
       splitLine: {
@@ -113,9 +128,9 @@ const updateChart = () => {
         type: 'bar',
         data: props.data.map(item => {
           if (unit === 'F') {
-            return Math.round((item.tempMin * 9/5) + 32)
+            return parseFloat(((item.tempMin * 9/5) + 32).toFixed(3))
           }
-          return Math.round(item.tempMin)
+          return parseFloat(item.tempMin.toFixed(3))
         }),
         itemStyle: {
           color: '#91cc75'
@@ -126,9 +141,9 @@ const updateChart = () => {
         type: 'bar',
         data: props.data.map(item => {
           if (unit === 'F') {
-            return Math.round((item.tempMax * 9/5) + 32)
+            return parseFloat(((item.tempMax * 9/5) + 32).toFixed(3))
           }
-          return Math.round(item.tempMax)
+          return parseFloat(item.tempMax.toFixed(3))
         }),
         itemStyle: {
           color: '#ee6666'
@@ -138,12 +153,19 @@ const updateChart = () => {
       {
         name: '降水概率',
         type: 'bar',
-        data: props.data.map(item => Math.round(item.pop * 100)),
+        data: props.data.map(item => parseFloat((item.pop * 100).toFixed(3))),
         itemStyle: {
-          color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
-            { offset: 0, color: '#5470c6' },
-            { offset: 1, color: '#91cc75' }
-          ])
+          color: {
+            type: 'linear',
+            x: 0,
+            y: 0,
+            x2: 0,
+            y2: 1,
+            colorStops: [
+              { offset: 0, color: '#5470c6' },
+              { offset: 1, color: '#91cc75' }
+            ]
+          }
         }
       }
     ]
