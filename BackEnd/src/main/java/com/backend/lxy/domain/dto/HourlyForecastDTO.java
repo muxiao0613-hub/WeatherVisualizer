@@ -21,6 +21,14 @@ public class HourlyForecastDTO {
     private String description;
     private String icon;
     private Double windSpeed;
+    private Integer windDeg;
+    private String windDir;
+    private String windScale;
     private Integer humidity;
+    private Double pressure;
+    private Double visibility;
+    private Double precip;
+    private Integer cloud;
+    private Double dew;
     private Double pop;
 }

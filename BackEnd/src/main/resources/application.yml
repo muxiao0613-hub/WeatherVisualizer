@@ -1,9 +1,19 @@
 server:
   port: ${APP_PORT:8080}
+  servlet:
+    encoding:
+      charset: UTF-8
+      enabled: true
+      force: true
 
 spring:
   application:
     name: weather-visualizer
+  http:
+    encoding:
+      charset: UTF-8
+      enabled: true
+      force: true
   h2:
     console:
       enabled: true
@@ -16,7 +26,7 @@ spring:
   jpa:
     hibernate:
       ddl-auto: update
-    show-sql: false
+    show-sql: true
     properties:
       hibernate:
         dialect: org.hibernate.dialect.H2Dialect
@@ -24,11 +34,11 @@ spring:
 
 app:
   mock-enabled: false
+  force-real-api: true
 
 weather:
   provider: QWEATHER
-  base-url: "https://devapi.qweather.com/v7"
-  api-key: "YOUR_QWEATHER_API_KEY"
+  base-url: "https://nm4bjaxp7y.re.qweatherapi.com"
   jwt:
     project-id: "4A89P8CYNW"
     credential-id: "KD5BDMKTNM"

@@ -19,7 +19,7 @@ public class UserPreference {
 
     @Column(name = "default_city")
     @Builder.Default
-    private String defaultCity = "Beijing";
+    private String defaultCity = "北京";
 
     @Column(name = "temperature_unit")
     @Builder.Default

@@ -3,12 +3,14 @@ package com.backend.lxy.client;
 import com.backend.lxy.config.QwenProperties;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import okhttp3.*;
 import org.springframework.stereotype.Component;
 
 import java.io.IOException;
+import java.util.UUID;
 
 @Component
 @RequiredArgsConstructor
@@ -16,31 +18,18 @@ import java.io.IOException;
 public class QwenClient {
 
     private final QwenProperties qwenProperties;
-    private final OkHttpClient httpClient = new OkHttpClient.Builder()
-            .connectTimeout(30, java.util.concurrent.TimeUnit.SECONDS)
-            .readTimeout(60, java.util.concurrent.TimeUnit.SECONDS)
-            .writeTimeout(30, java.util.concurrent.TimeUnit.SECONDS)
-            .build();
+    private final OkHttpClient httpClient = new OkHttpClient();
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     public String chat(String prompt) throws IOException {
-        String requestBody = String.format("""
-            {
-                "model": "%s",
-                "messages": [
-                    {
-                        "role": "user",
-                        "content": "%s"
-                    }
-                ]
-            }
-            """, qwenProperties.getModel(), prompt.replace("\"", "\\\"").replace("\n", "\\n"));
-
-        log.info("📤 Qwen API request URL: {}", qwenProperties.getBaseUrl() + "/chat/completions");
-        log.info("📤 Qwen API request body: {}", requestBody);
-
+        String url = qwenProperties.getBaseUrl();
+        
+        String requestBody = buildRequestBody(prompt);
+        
+        log.info("Qwen API request - URL: {}, Prompt length: {}", url, prompt.length());
+        
         Request request = new Request.Builder()
-                .url(qwenProperties.getBaseUrl() + "/chat/completions")
+                .url(url)
                 .addHeader("Authorization", "Bearer " + qwenProperties.getApiKey())
                 .addHeader("Content-Type", "application/json")
                 .post(RequestBody.create(requestBody, MediaType.parse("application/json")))
@@ -49,26 +38,63 @@ public class QwenClient {
         try (Response response = httpClient.newCall(request).execute()) {
             if (!response.isSuccessful()) {
                 String errorBody = response.body() != null ? response.body().string() : "No body";
-                log.error("❌ Qwen API error response - Status: {}, Body: {}", response.code(), errorBody);
-                throw new IOException("Unexpected response code: " + response.code() + ", body: " + errorBody);
+                log.error("Qwen API error - Status: {}, Body: {}", response.code(), errorBody);
+                throw new IOException("Qwen API request failed with status: " + response.code());
             }
 
             String responseBody = response.body().string();
-            log.info("✅ Qwen API response received successfully: {}", responseBody);
+            log.info("Qwen API response received, length: {}", responseBody.length());
+            
+            return parseResponse(responseBody);
+        }
+    }
+
+    private String buildRequestBody(String prompt) {
+        try {
+            ObjectNode requestBody = objectMapper.createObjectNode();
+            ObjectNode input = objectMapper.createObjectNode();
+            ObjectNode message = objectMapper.createObjectNode();
+            message.put("role", "user");
+            message.put("content", prompt);
+            
+            input.set("messages", objectMapper.createArrayNode().add(message));
+            requestBody.set("input", input);
+            requestBody.put("model", qwenProperties.getModel());
+            
+            ObjectNode parameters = objectMapper.createObjectNode();
+            parameters.put("result_format", "message");
+            requestBody.set("parameters", parameters);
+
+            return objectMapper.writeValueAsString(requestBody);
+        } catch (Exception e) {
+            log.error("Failed to build request body", e);
+            throw new RuntimeException("Failed to build request body", e);
+        }
+    }
+
+    private String parseResponse(String responseBody) {
+        try {
             JsonNode root = objectMapper.readTree(responseBody);
-            return root.get("choices").get(0).get("message").get("content").asText();
-        } catch (java.net.SocketTimeoutException e) {
-            log.error("⏱️ Qwen API timeout error: {}", e.getMessage());
-            throw new IOException("Qwen API timeout: " + e.getMessage(), e);
-        } catch (java.net.UnknownHostException e) {
-            log.error("🌐 Qwen API DNS resolution error: {}", e.getMessage());
-            throw new IOException("Qwen API DNS resolution failed: " + e.getMessage(), e);
-        } catch (java.net.ConnectException e) {
-            log.error("🔌 Qwen API connection error: {}", e.getMessage());
-            throw new IOException("Qwen API connection failed: " + e.getMessage(), e);
-        } catch (IOException e) {
-            log.error("💥 Qwen API IO error: {} - {}", e.getClass().getSimpleName(), e.getMessage());
-            throw new IOException("Qwen API error: " + e.getMessage(), e);
+            JsonNode output = root.get("output");
+            
+            if (output != null && output.has("choices")) {
+                JsonNode choices = output.get("choices");
+                if (choices != null && choices.isArray() && choices.size() > 0) {
+                    JsonNode choice = choices.get(0);
+                    if (choice.has("message")) {
+                        JsonNode message = choice.get("message");
+                        if (message.has("content")) {
+                            return message.get("content").asText();
+                        }
+                    }
+                }
+            }
+            
+            log.warn("Unexpected Qwen API response format: {}", responseBody);
+            return "抱歉，我无法理解您的问题。";
+        } catch (Exception e) {
+            log.error("Failed to parse Qwen API response", e);
+            return "抱歉，解析响应时出错。";
         }
     }
 }
