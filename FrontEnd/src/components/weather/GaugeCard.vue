@@ -62,8 +62,10 @@ const aqiLevelClass = computed(() => {
 })
 
 const initChart = () => {
+  console.log('Gauge: initChart called, isInitialized:', isInitialized.value, 'chartRef:', chartRef.value)
+  
   if (!chartRef.value) {
-    console.warn('GaugeCard: chartRef is null, retrying...')
+    console.warn('Gauge: chartRef is null')
     if (retryCount.value < 3) {
       retryCount.value++
       setTimeout(() => initChart(), 100)
@@ -72,37 +74,74 @@ const initChart = () => {
   }
 
   const containerRect = chartRef.value.getBoundingClientRect()
+  console.log('Gauge: Container rect:', containerRect)
+  
   if (containerRect.width === 0 || containerRect.height === 0) {
-    console.warn('GaugeCard: Container has zero size, waiting...')
+    console.warn('Gauge: Container size is 0')
     setTimeout(() => initChart(), 200)
     return
   }
 
   if (chartInstance.value) {
+    console.log('Gauge: Disposing old chart instance')
     chartInstance.value.dispose()
   }
 
   try {
+    console.log('Gauge: Initializing ECharts instance')
     chartInstance.value = echarts.init(chartRef.value)
     isInitialized.value = true
     retryCount.value = 0
-    console.log('GaugeCard: Chart initialized successfully')
+    console.log('Gauge: ECharts initialized successfully, isInitialized:', isInitialized.value)
 
     updateChart()
 
     window.addEventListener('resize', handleResize)
   } catch (error) {
-    console.error('GaugeCard: Failed to initialize chart:', error)
+    console.error('Gauge: 初始化失败:', error)
   }
 }
 
 const updateChart = () => {
-  if (!isInitialized.value || !chartInstance.value) {
-    console.warn('GaugeCard: Chart not initialized, skipping update')
+  if (!chartRef.value) {
+    console.warn('Gauge: chartRef is null, cannot update chart')
     return
   }
 
-  console.log('GaugeCard: Updating chart with AQI:', aqi.value)
+  console.log('Gauge: 更新图表，AQI:', aqi.value)
+  console.log('Gauge: 图表容器:', chartRef.value)
+  console.log('Gauge: 图表实例:', chartInstance.value)
+  console.log('Gauge: 容器尺寸:', chartRef.value ? {
+    width: chartRef.value.offsetWidth,
+    height: chartRef.value.offsetHeight
+  } : 'null')
+
+  if (!isInitialized.value || !chartInstance.value) {
+    console.warn('Gauge: Chart not initialized, reinitializing...')
+    isInitialized.value = false
+    if (chartInstance.value) {
+      chartInstance.value.dispose()
+      chartInstance.value = undefined
+    }
+    nextTick(() => {
+      setTimeout(() => initChart(), 100)
+    })
+    return
+  }
+
+  const containerInstance = chartRef.value.getAttribute('_echarts_instance_')
+  if (!containerInstance) {
+    console.warn('Gauge: Container has no echarts instance, reinitializing...')
+    isInitialized.value = false
+    if (chartInstance.value) {
+      chartInstance.value.dispose()
+      chartInstance.value = undefined
+    }
+    nextTick(() => {
+      setTimeout(() => initChart(), 100)
+    })
+    return
+  }
 
   const option = {
     series: [
@@ -178,7 +217,6 @@ const updateChart = () => {
   }
 
   chartInstance.value.setOption(option, true)
-  console.log('GaugeCard: Chart option set successfully')
 }
 
 const handleResize = () => {
@@ -188,7 +226,6 @@ const handleResize = () => {
 }
 
 watch(() => props.weather, () => {
-  console.log('GaugeCard: Weather data changed')
   if (!isInitialized.value && props.weather) {
     nextTick(() => {
       setTimeout(() => initChart(), 100)
@@ -201,14 +238,12 @@ watch(() => props.weather, () => {
 }, { deep: true })
 
 onMounted(() => {
-  console.log('GaugeCard: Component mounted')
   nextTick(() => {
     setTimeout(() => initChart(), 100)
   })
 })
 
 onBeforeUnmount(() => {
-  console.log('GaugeCard: Component unmounting')
   window.removeEventListener('resize', handleResize)
   if (chartInstance.value) {
     chartInstance.value.dispose()

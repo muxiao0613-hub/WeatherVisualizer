@@ -38,8 +38,12 @@
 
       <el-row :gutter="16" class="details">
         <el-col :span="8" class="detail-item">
-          <div class="detail-label">风速</div>
-          <div class="detail-value">{{ formatWindSpeed(weather.windSpeed) }} {{ windSpeedUnit }}</div>
+          <div class="detail-label">风向</div>
+          <div class="detail-value">{{ weather.windDir || '-' }}</div>
+        </el-col>
+        <el-col :span="8" class="detail-item">
+          <div class="detail-label">风力</div>
+          <div class="detail-value">{{ weather.windScale !== undefined ? weather.windScale + '级' : '-' }}</div>
         </el-col>
         <el-col :span="8" class="detail-item">
           <div class="detail-label">湿度</div>
@@ -54,8 +58,16 @@
           <div class="detail-value">{{ Math.round(weather.visibility * 10) / 10 }}km</div>
         </el-col>
         <el-col :span="8" class="detail-item">
-          <div class="detail-label">风向</div>
-          <div class="detail-value">{{ Math.round(weather.windDeg) }}°</div>
+          <div class="detail-label">降水</div>
+          <div class="detail-value">{{ weather.precip !== undefined ? Math.round(weather.precip * 10) / 10 : '-' }}mm</div>
+        </el-col>
+        <el-col :span="8" class="detail-item">
+          <div class="detail-label">云量</div>
+          <div class="detail-value">{{ weather.cloud !== undefined && weather.cloud !== null ? weather.cloud + '%' : '-' }}</div>
+        </el-col>
+        <el-col :span="8" class="detail-item">
+          <div class="detail-label">露点</div>
+          <div class="detail-value">{{ weather.dew !== undefined && weather.dew !== null ? Math.round(weather.dew) + '°' : '-' }}</div>
         </el-col>
         <el-col :span="8" class="detail-item">
           <div class="detail-label">AQI</div>

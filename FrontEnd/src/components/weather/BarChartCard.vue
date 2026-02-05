@@ -43,8 +43,10 @@ const isInitialized = ref(false)
 const retryCount = ref(0)
 
 const initChart = () => {
+  console.log('BarChart: initChart called, isInitialized:', isInitialized.value, 'chartRef:', chartRef.value)
+  
   if (!chartRef.value) {
-    console.warn('BarChartCard: chartRef is null, retrying...')
+    console.warn('BarChart: chartRef is null')
     if (retryCount.value < 3) {
       retryCount.value++
       setTimeout(() => initChart(), 100)
@@ -53,48 +55,126 @@ const initChart = () => {
   }
 
   const containerRect = chartRef.value.getBoundingClientRect()
+  console.log('BarChart: Container rect:', containerRect)
+  
   if (containerRect.width === 0 || containerRect.height === 0) {
-    console.warn('BarChartCard: Container has zero size, waiting...')
-    setTimeout(() => initChart(), 200)
+    console.warn('BarChart: Container size is 0')
+    if (retryCount.value < 10) {
+      retryCount.value++
+      setTimeout(() => initChart(), 200)
+    }
     return
   }
 
   if (chartInstance.value) {
+    console.log('BarChart: Disposing old chart instance')
     chartInstance.value.dispose()
   }
 
   try {
+    console.log('BarChart: Initializing ECharts instance')
     chartInstance.value = echarts.init(chartRef.value)
     isInitialized.value = true
     retryCount.value = 0
-    console.log('BarChartCard: Chart initialized successfully')
+    console.log('BarChart: ECharts initialized successfully, isInitialized:', isInitialized.value)
 
     if (props.data.length > 0) {
+      console.log('BarChart: Data available, updating chart')
       updateChart()
     }
 
     window.addEventListener('resize', handleResize)
   } catch (error) {
-    console.error('BarChartCard: Failed to initialize chart:', error)
+    console.error('BarChart: 初始化失败:', error)
   }
 }
 
 const updateChart = () => {
-  if (!isInitialized.value || !chartInstance.value) {
-    console.warn('BarChartCard: Chart not initialized, skipping update')
+  if (!chartRef.value) {
+    console.warn('BarChart: chartRef is null, cannot update chart')
     return
   }
 
   if (!props.data || props.data.length === 0) {
-    console.warn('BarChartCard: No data available, clearing chart')
-    chartInstance.value.clear()
+    console.warn('BarChart: No data available, clearing chart')
+    if (chartInstance.value) {
+      chartInstance.value.clear()
+    }
     return
   }
 
-  console.log('BarChartCard: Updating chart with', props.data.length, 'data points')
+  console.log('BarChart: 更新图表，数据量:', props.data.length)
+  console.log('BarChart: 图表容器:', chartRef.value)
+  console.log('BarChart: 图表实例:', chartInstance.value)
+  console.log('BarChart: 容器尺寸:', chartRef.value ? {
+    width: chartRef.value.offsetWidth,
+    height: chartRef.value.offsetHeight
+  } : 'null')
 
-  const dates = props.data.map(item => dayjs(item.date).format('MM-DD'))
+  if (!isInitialized.value || !chartInstance.value) {
+    console.warn('BarChart: Chart not initialized, reinitializing...')
+    isInitialized.value = false
+    if (chartInstance.value) {
+      chartInstance.value.dispose()
+      chartInstance.value = undefined
+    }
+    nextTick(() => {
+      setTimeout(() => initChart(), 100)
+    })
+    return
+  }
+
+  const containerInstance = chartRef.value.getAttribute('_echarts_instance_')
+  if (!containerInstance) {
+    console.warn('BarChart: Container has no echarts instance, reinitializing...')
+    isInitialized.value = false
+    if (chartInstance.value) {
+      chartInstance.value.dispose()
+      chartInstance.value = undefined
+    }
+    nextTick(() => {
+      setTimeout(() => initChart(), 100)
+    })
+    return
+  }
+
+  const dates = props.data.map(item => {
+    if (!item.date) {
+      return 'Unknown'
+    }
+    return dayjs(item.date).format('MM-DD')
+  })
   const unit = preferenceStore.preferences.temperatureUnit
+
+  const tempMinData = props.data.map(item => {
+    const temp = Number(item.tempMin)
+    if (isNaN(temp)) {
+      return 0
+    }
+    if (unit === 'F') {
+      return Math.round((temp * 9/5) + 32)
+    }
+    return Math.round(temp)
+  })
+
+  const tempMaxData = props.data.map(item => {
+    const temp = Number(item.tempMax)
+    if (isNaN(temp)) {
+      return 0
+    }
+    if (unit === 'F') {
+      return Math.round((temp * 9/5) + 32)
+    }
+    return Math.round(temp)
+  })
+
+  const popData = props.data.map(item => {
+    const pop = Number(item.pop)
+    if (isNaN(pop)) {
+      return 0
+    }
+    return Math.round(pop * 100)
+  })
 
   const option = {
     tooltip: {
@@ -152,13 +232,7 @@ const updateChart = () => {
       {
         name: '最低温度',
         type: 'bar',
-        data: props.data.map(item => {
-          const temp = Number(item.tempMin)
-          if (unit === 'F') {
-            return Math.round((temp * 9/5) + 32)
-          }
-          return Math.round(temp)
-        }),
+        data: tempMinData,
         itemStyle: {
           color: '#91cc75'
         }
@@ -166,13 +240,7 @@ const updateChart = () => {
       {
         name: '最高温度',
         type: 'bar',
-        data: props.data.map(item => {
-          const temp = Number(item.tempMax)
-          if (unit === 'F') {
-            return Math.round((temp * 9/5) + 32)
-          }
-          return Math.round(temp)
-        }),
+        data: tempMaxData,
         itemStyle: {
           color: '#ee6666'
         }
@@ -181,7 +249,7 @@ const updateChart = () => {
       {
         name: '降水概率',
         type: 'bar',
-        data: props.data.map(item => Math.round(Number(item.pop) * 100)),
+        data: popData,
         itemStyle: {
           color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
             { offset: 0, color: '#5470c6' },
@@ -192,8 +260,11 @@ const updateChart = () => {
     ]
   }
 
-  chartInstance.value.setOption(option, true)
-  console.log('BarChartCard: Chart option set successfully')
+  try {
+    chartInstance.value.setOption(option, true)
+  } catch (error) {
+    console.error('BarChart: 图表更新失败:', error)
+  }
 }
 
 const handleResize = () => {
@@ -203,15 +274,13 @@ const handleResize = () => {
 }
 
 watch(activeTab, () => {
-  console.log('BarChartCard: Active tab changed to', activeTab.value)
   if (isInitialized.value) {
     updateChart()
   }
 })
 
 watch(() => props.data, (newData) => {
-  console.log('BarChartCard: Data changed, length:', newData?.length)
-  if (!isInitialized.value && newData && newData.length > 0) {
+  if (!isInitialized.value && newData && newData.length > 0 && !props.loading) {
     nextTick(() => {
       setTimeout(() => initChart(), 100)
     })
@@ -222,15 +291,23 @@ watch(() => props.data, (newData) => {
   }
 }, { deep: true })
 
+watch(() => props.loading, (newLoading, oldLoading) => {
+  if (oldLoading && !newLoading && props.data.length > 0 && !isInitialized.value) {
+    nextTick(() => {
+      setTimeout(() => initChart(), 100)
+    })
+  }
+})
+
 onMounted(() => {
-  console.log('BarChartCard: Component mounted')
-  nextTick(() => {
-    setTimeout(() => initChart(), 100)
-  })
+  if (props.data.length > 0 && !props.loading) {
+    nextTick(() => {
+      setTimeout(() => initChart(), 100)
+    })
+  }
 })
 
 onBeforeUnmount(() => {
-  console.log('BarChartCard: Component unmounting')
   window.removeEventListener('resize', handleResize)
   if (chartInstance.value) {
     chartInstance.value.dispose()

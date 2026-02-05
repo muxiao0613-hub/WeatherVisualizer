@@ -44,8 +44,10 @@ const isInitialized = ref(false)
 const retryCount = ref(0)
 
 const initChart = () => {
+  console.log('LineChart: initChart called, isInitialized:', isInitialized.value, 'chartRef:', chartRef.value)
+  
   if (!chartRef.value) {
-    console.warn('LineChartCard: chartRef is null, retrying...')
+    console.warn('LineChart: chartRef is null')
     if (retryCount.value < 3) {
       retryCount.value++
       setTimeout(() => initChart(), 100)
@@ -54,47 +56,99 @@ const initChart = () => {
   }
 
   const containerRect = chartRef.value.getBoundingClientRect()
+  console.log('LineChart: Container rect:', containerRect)
+  
   if (containerRect.width === 0 || containerRect.height === 0) {
-    console.warn('LineChartCard: Container has zero size, waiting...')
-    setTimeout(() => initChart(), 200)
+    console.warn('LineChart: Container size is 0')
+    if (retryCount.value < 10) {
+      retryCount.value++
+      setTimeout(() => initChart(), 200)
+    } else {
+      console.error('LineChart: Failed to initialize after 10 retries')
+    }
     return
   }
 
   if (chartInstance.value) {
+    console.log('LineChart: Disposing old chart instance')
     chartInstance.value.dispose()
   }
 
   try {
+    console.log('LineChart: Initializing ECharts instance')
     chartInstance.value = echarts.init(chartRef.value)
     isInitialized.value = true
     retryCount.value = 0
-    console.log('LineChartCard: Chart initialized successfully')
+    console.log('LineChart: ECharts initialized successfully, isInitialized:', isInitialized.value)
 
     if (props.data.length > 0) {
+      console.log('LineChart: Data available, updating chart')
       updateChart()
     }
 
     window.addEventListener('resize', handleResize)
   } catch (error) {
-    console.error('LineChartCard: Failed to initialize chart:', error)
+    console.error('LineChart: 初始化失败:', error)
   }
 }
 
 const updateChart = () => {
-  if (!isInitialized.value || !chartInstance.value) {
-    console.warn('LineChartCard: Chart not initialized, skipping update')
+  if (!chartRef.value) {
+    console.warn('LineChart: chartRef is null, cannot update chart')
     return
   }
 
   if (!props.data || props.data.length === 0) {
-    console.warn('LineChartCard: No data available, clearing chart')
-    chartInstance.value.clear()
+    console.warn('LineChart: No data available, clearing chart')
+    if (chartInstance.value) {
+      chartInstance.value.clear()
+    }
     return
   }
 
-  console.log('LineChartCard: Updating chart with', props.data.length, 'data points')
+  console.log('LineChart: 更新图表，数据量:', props.data.length)
+  console.log('LineChart: 图表容器:', chartRef.value)
+  console.log('LineChart: 图表实例:', chartInstance.value)
+  console.log('LineChart: 容器尺寸:', chartRef.value ? {
+    width: chartRef.value.offsetWidth,
+    height: chartRef.value.offsetHeight
+  } : 'null')
 
-  const times = props.data.map(item => dayjs(item.time).format('HH:mm'))
+  if (!isInitialized.value || !chartInstance.value) {
+    console.warn('LineChart: Chart not initialized, reinitializing...')
+    isInitialized.value = false
+    if (chartInstance.value) {
+      chartInstance.value.dispose()
+      chartInstance.value = undefined
+    }
+    nextTick(() => {
+      setTimeout(() => initChart(), 100)
+    })
+    return
+  }
+
+  const containerInstance = chartRef.value.getAttribute('_echarts_instance_')
+  if (!containerInstance) {
+    console.warn('LineChart: Container has no echarts instance, reinitializing...')
+    isInitialized.value = false
+    if (chartInstance.value) {
+      chartInstance.value.dispose()
+      chartInstance.value = undefined
+    }
+    nextTick(() => {
+      setTimeout(() => initChart(), 100)
+    })
+    return
+  }
+
+  const times = props.data.map(item => {
+    if (!item.time) {
+      console.warn('LineChart: Missing time in item', item)
+      return 'Unknown'
+    }
+    return dayjs(item.time).format('HH:mm')
+  })
+  
   let values: number[] = []
   let unit = ''
   let seriesName = ''
@@ -103,6 +157,10 @@ const updateChart = () => {
     case 'temperature':
       values = props.data.map(item => {
         const temp = Number(item.temp)
+        if (isNaN(temp)) {
+          console.warn('LineChart: Invalid temp', item.temp)
+          return 0
+        }
         if (preferenceStore.preferences.temperatureUnit === 'F') {
           return Math.round((temp * 9/5) + 32)
         }
@@ -112,13 +170,24 @@ const updateChart = () => {
       seriesName = '温度'
       break
     case 'humidity':
-      values = props.data.map(item => Math.round(Number(item.humidity)))
+      values = props.data.map(item => {
+        const humidity = Number(item.humidity)
+        if (isNaN(humidity)) {
+          console.warn('LineChart: Invalid humidity', item.humidity)
+          return 0
+        }
+        return Math.round(humidity)
+      })
       unit = '%'
       seriesName = '湿度'
       break
     case 'windSpeed':
       values = props.data.map(item => {
         const speed = Number(item.windSpeed)
+        if (isNaN(speed)) {
+          console.warn('LineChart: Invalid windSpeed', item.windSpeed)
+          return 0
+        }
         if (preferenceStore.preferences.windSpeedUnit === 'km/h') {
           return Math.round(speed * 3.6 * 10) / 10
         }
@@ -128,8 +197,6 @@ const updateChart = () => {
       seriesName = '风速'
       break
   }
-
-  console.log('LineChartCard: Chart data:', { times, values, unit, seriesName })
 
   const option = {
     tooltip: {
@@ -205,8 +272,12 @@ const updateChart = () => {
     ]
   }
 
-  chartInstance.value.setOption(option, true)
-  console.log('LineChartCard: Chart option set successfully')
+  try {
+    chartInstance.value.setOption(option, true)
+    console.log('LineChart: 图表更新完成')
+  } catch (error) {
+    console.error('LineChart: 图表更新失败:', error)
+  }
 }
 
 const handleResize = () => {
@@ -216,30 +287,44 @@ const handleResize = () => {
 }
 
 watch(activeTab, () => {
-  console.log('LineChartCard: Active tab changed to', activeTab.value)
   if (isInitialized.value) {
     updateChart()
   }
 })
 
 watch(() => props.data, (newData) => {
-  console.log('LineChartCard: Data changed, length:', newData?.length)
-  if (!isInitialized.value && newData && newData.length > 0) {
+  console.log('LineChart: Data watch triggered')
+  console.log('  - isInitialized:', isInitialized.value)
+  console.log('  - newData length:', newData?.length)
+  console.log('  - loading:', props.loading)
+  
+  if (!isInitialized.value && newData && newData.length > 0 && !props.loading) {
+    console.log('LineChart: Condition met - calling initChart')
     nextTick(() => {
       setTimeout(() => initChart(), 100)
     })
   } else if (isInitialized.value) {
+    console.log('LineChart: Chart already initialized - calling updateChart')
     nextTick(() => {
       updateChart()
     })
   }
 }, { deep: true })
 
+watch(() => props.loading, (newLoading, oldLoading) => {
+  if (oldLoading && !newLoading && props.data.length > 0 && !isInitialized.value) {
+    nextTick(() => {
+      setTimeout(() => initChart(), 100)
+    })
+  }
+})
+
 onMounted(() => {
-  console.log('LineChartCard: Component mounted')
-  nextTick(() => {
-    setTimeout(() => initChart(), 100)
-  })
+  if (props.data.length > 0 && !props.loading) {
+    nextTick(() => {
+      setTimeout(() => initChart(), 100)
+    })
+  }
 })
 
 onBeforeUnmount(() => {

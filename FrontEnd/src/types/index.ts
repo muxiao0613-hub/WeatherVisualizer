@@ -23,9 +23,14 @@ export interface CurrentWeatherDTO {
   icon: string
   windSpeed: number
   windDeg: number
+  windDir?: string
+  windScale?: string
   humidity: number
   pressure: number
   visibility: number
+  precip?: number
+  cloud?: number
+  dew?: number
   timestamp: number
   country?: string
   aqi?: number
@@ -41,7 +46,15 @@ export interface HourlyForecastDTO {
   description: string
   icon: string
   windSpeed: number
+  windDeg?: number
+  windDir?: string
+  windScale?: string
   humidity: number
+  pressure?: number
+  visibility?: number
+  precip?: number
+  cloud?: number
+  dew?: number
   pop: number
 }
 
@@ -52,11 +65,32 @@ export interface DailyForecastDTO {
   date: string
   tempMin: number
   tempMax: number
-  description: string
-  icon: string
-  windSpeed: number
+  iconDay: string
+  textDay: string
+  iconNight: string
+  textNight: string
+  wind360Day?: number
+  windDirDay?: string
+  windScaleDay?: string
+  windSpeedDay?: number
+  wind360Night?: number
+  windDirNight?: string
+  windScaleNight?: string
+  windSpeedNight?: number
   humidity: number
-  pop: number
+  pressure?: number
+  visibility?: number
+  precip?: number
+  cloud?: number
+  dew?: number
+  pop?: number
+  sunrise?: string
+  sunset?: string
+  moonrise?: string
+  moonset?: string
+  moonPhase?: string
+  moonPhaseIcon?: string
+  uvIndex?: number
 }
 
 export interface AlertDTO {
