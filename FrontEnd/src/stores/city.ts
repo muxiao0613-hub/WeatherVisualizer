@@ -4,10 +4,10 @@ import type { CityDTO } from '@/types'
 
 export const useCityStore = defineStore('city', () => {
   const currentCity = ref<CityDTO>({
-    name: 'Beijing',
-    country: 'CN',
-    lat: 39.9042,
-    lon: 116.4074
+    name: '',
+    country: '',
+    lat: 0,
+    lon: 0
   })
 
   const setCurrentCity = (city: CityDTO) => {
