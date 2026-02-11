@@ -156,7 +156,7 @@ const updateChart = () => {
   switch (activeTab.value) {
     case 'temperature':
       values = props.data.map(item => {
-        const temp = Number(item.temp)
+        const temp = item.temp !== undefined && item.temp !== null ? Number(item.temp) : 0
         if (isNaN(temp)) {
           console.warn('LineChart: Invalid temp', item.temp)
           return 0
@@ -171,7 +171,7 @@ const updateChart = () => {
       break
     case 'humidity':
       values = props.data.map(item => {
-        const humidity = Number(item.humidity)
+        const humidity = item.humidity !== undefined && item.humidity !== null ? Number(item.humidity) : 0
         if (isNaN(humidity)) {
           console.warn('LineChart: Invalid humidity', item.humidity)
           return 0
@@ -183,7 +183,7 @@ const updateChart = () => {
       break
     case 'windSpeed':
       values = props.data.map(item => {
-        const speed = Number(item.windSpeed)
+        const speed = item.windSpeed !== undefined && item.windSpeed !== null ? Number(item.windSpeed) : 0
         if (isNaN(speed)) {
           console.warn('LineChart: Invalid windSpeed', item.windSpeed)
           return 0

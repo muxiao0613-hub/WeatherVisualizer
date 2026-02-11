@@ -147,7 +147,7 @@ const updateChart = () => {
   const unit = preferenceStore.preferences.temperatureUnit
 
   const tempMinData = props.data.map(item => {
-    const temp = Number(item.tempMin)
+    const temp = item.tempMin !== undefined && item.tempMin !== null ? Number(item.tempMin) : 0
     if (isNaN(temp)) {
       return 0
     }
@@ -158,7 +158,7 @@ const updateChart = () => {
   })
 
   const tempMaxData = props.data.map(item => {
-    const temp = Number(item.tempMax)
+    const temp = item.tempMax !== undefined && item.tempMax !== null ? Number(item.tempMax) : 0
     if (isNaN(temp)) {
       return 0
     }
@@ -169,7 +169,7 @@ const updateChart = () => {
   })
 
   const popData = props.data.map(item => {
-    const pop = Number(item.pop)
+    const pop = item.pop !== undefined && item.pop !== null ? Number(item.pop) : 0
     if (isNaN(pop)) {
       return 0
     }

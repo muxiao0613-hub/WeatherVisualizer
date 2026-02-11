@@ -22,7 +22,7 @@ public class CityController {
     @GetMapping("/search")
     @Operation(summary = "Search cities by keyword")
     public ApiResponse<List<CityDTO>> searchCities(
-            @Parameter(description = "Search keyword") @RequestParam String keyword) {
+            @Parameter(description = "Search keyword") @RequestParam String keyword) throws Exception {
         List<CityDTO> cities = cityService.searchCities(keyword);
         return ApiResponse.success(cities);
     }

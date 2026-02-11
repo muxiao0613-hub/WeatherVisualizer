@@ -287,6 +287,7 @@ public class WeatherClient {
                         .moonset(dayNode.has("moonset") ? dayNode.get("moonset").asText() : null)
                         .moonPhase(dayNode.has("moonPhase") ? dayNode.get("moonPhase").asText() : null)
                         .moonPhaseIcon(dayNode.has("moonPhaseIcon") ? dayNode.get("moonPhaseIcon").asText() : null)
+                        .pop(dayNode.has("pop") ? parseDouble(dayNode.get("pop")) : 0.0)
                         .build());
             }
             

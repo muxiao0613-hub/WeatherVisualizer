@@ -1,46 +1,52 @@
 <template>
   <AppShell>
     <div class="dashboard">
-      <el-row :gutter="24">
-        <el-col :span="24" v-show="preferenceStore.preferences.showCurrentCard">
-          <CurrentWeatherCard
-            :weather="weatherStore.currentWeather"
-            :loading="weatherStore.loading"
-          />
-        </el-col>
+      <el-empty v-if="!hasValidCity" description="请先选择一个城市" :image-size="200">
+        <el-button type="primary" @click="openCitySelector">选择城市</el-button>
+      </el-empty>
 
-        <el-col :span="24" :lg="12" v-show="preferenceStore.preferences.showLineChart">
-          <LineChartCard
-            :data="weatherStore.hourlyForecast"
-            :loading="weatherStore.loading"
-          />
-        </el-col>
+      <template v-else>
+        <el-row :gutter="24">
+          <el-col :span="24" v-show="preferenceStore.preferences.showCurrentCard">
+            <CurrentWeatherCard
+              :weather="weatherStore.currentWeather"
+              :loading="weatherStore.loading"
+            />
+          </el-col>
 
-        <el-col :span="24" :lg="12" v-show="preferenceStore.preferences.showBarChart">
-          <BarChartCard
-            :data="weatherStore.dailyForecast"
-            :loading="weatherStore.loading"
-          />
-        </el-col>
+          <el-col :span="24" :lg="12" v-show="preferenceStore.preferences.showLineChart">
+            <LineChartCard
+              :data="weatherStore.hourlyForecast"
+              :loading="weatherStore.loading"
+            />
+          </el-col>
 
-        <el-col :span="24" :lg="8" v-show="preferenceStore.preferences.showGaugeCard">
-          <GaugeCard
-            :weather="weatherStore.currentWeather"
-            :loading="weatherStore.loading"
-          />
-        </el-col>
+          <el-col :span="24" :lg="12" v-show="preferenceStore.preferences.showBarChart">
+            <BarChartCard
+              :data="weatherStore.dailyForecast"
+              :loading="weatherStore.loading"
+            />
+          </el-col>
 
-        <el-col :span="24" :lg="16" v-show="preferenceStore.preferences.showAlertsCard">
-          <AlertsCard
-            :alerts="weatherStore.alerts"
-            :loading="weatherStore.loading"
-          />
-        </el-col>
+          <el-col :span="24" :lg="8" v-show="preferenceStore.preferences.showGaugeCard">
+            <GaugeCard
+              :weather="weatherStore.currentWeather"
+              :loading="weatherStore.loading"
+            />
+          </el-col>
 
-        <el-col :span="24" v-show="preferenceStore.preferences.showAiAssistant">
-          <AiChatCard />
-        </el-col>
-      </el-row>
+          <el-col :span="24" :lg="16" v-show="preferenceStore.preferences.showAlertsCard">
+            <AlertsCard
+              :alerts="weatherStore.alerts"
+              :loading="weatherStore.loading"
+            />
+          </el-col>
+
+          <el-col :span="24" v-show="preferenceStore.preferences.showAiAssistant">
+            <AiChatCard />
+          </el-col>
+        </el-row>
+      </template>
     </div>
   </AppShell>
 </template>
@@ -59,12 +65,21 @@ import { useCityStore } from '@/stores/city'
 import { usePreferenceStore } from '@/stores/preference'
 import { weatherApi, preferenceApi, cityApi } from '@/services/api'
 import { ElMessage } from 'element-plus'
+import type { CityDTO } from '@/types'
 
 const weatherStore = useWeatherStore()
 const cityStore = useCityStore()
 const preferenceStore = usePreferenceStore()
 
+const hasValidCity = computed(() => {
+  return cityStore.currentCity && cityStore.currentCity.name && cityStore.currentCity.name.trim() !== ''
+})
+
 const loadWeatherData = async () => {
+  if (!hasValidCity.value) {
+    return
+  }
+
   weatherStore.setLoading(true)
   weatherStore.clearError()
 
@@ -108,6 +123,11 @@ const loadPreferences = async () => {
   }
 }
 
+const openCitySelector = () => {
+  const event = new CustomEvent('openCitySelector')
+  window.dispatchEvent(event)
+}
+
 onMounted(async () => {
   console.log('=== Dashboard mounted ===')
   await loadPreferences()
@@ -115,18 +135,21 @@ onMounted(async () => {
   const defaultCityName = preferenceStore.preferences.defaultCity
   console.log('默认城市:', defaultCityName, '当前城市:', cityStore.currentCity.name)
   
-  if (defaultCityName && defaultCityName !== cityStore.currentCity.name) {
+  if (defaultCityName && defaultCityName.trim() !== '') {
     console.log('搜索默认城市...')
     try {
       const cities = await cityApi.searchCities(defaultCityName)
       if (cities && cities.length > 0) {
         console.log('找到默认城市:', cities[0].name)
         cityStore.setCurrentCity(cities[0])
-        return
+      } else {
+        console.log('未找到默认城市，等待用户选择')
       }
     } catch (error) {
       console.error('搜索默认城市失败:', error)
     }
+  } else {
+    console.log('未设置默认城市，等待用户选择')
   }
   
   console.log('Dashboard初始化完成')
@@ -135,22 +158,20 @@ onMounted(async () => {
 watch(() => cityStore.currentCity, (newCity, oldCity) => {
   console.log('=== Dashboard watch triggered ===')
   console.log('Old city:', oldCity?.name, 'New city:', newCity?.name)
-  console.log('是否加载?', newCity && newCity.name !== oldCity?.name)
+  console.log('是否加载?', newCity && newCity.name && newCity.name !== oldCity?.name)
   
-  if (newCity && newCity.name !== oldCity?.name) {
+  if (newCity && newCity.name && newCity.name !== oldCity?.name) {
     console.log('✓ 触发loadWeatherData')
     loadWeatherData()
   } else {
     console.log('✗ 不触发loadWeatherData')
   }
-}, { deep: true, immediate: true })
+}, { deep: true })
 
-// 监听偏好设置变化
 watch(() => preferenceStore.preferences, (newPrefs) => {
   console.log('偏好设置发生变化:', newPrefs)
 }, { deep: true })
 
-// 监听Weather Store变化，图表组件会自动响应数据变化
 watch(() => [
   weatherStore.currentWeather,
   weatherStore.hourlyForecast,
@@ -174,6 +195,23 @@ watch(() => [
 .el-col {
   margin-bottom: 24px;
   padding: 0 12px;
+}
+
+.city-option {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+}
+
+.city-name {
+  font-weight: 600;
+  color: #303133;
+}
+
+.city-location {
+  font-size: 12px;
+  color: #909399;
 }
 
 @media (max-width: 1200px) {

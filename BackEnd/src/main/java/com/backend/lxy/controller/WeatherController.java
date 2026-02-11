@@ -9,6 +9,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
+import java.io.IOException;
 import java.util.List;
 
 @RestController
@@ -24,7 +25,7 @@ public class WeatherController {
     public ApiResponse<CurrentWeatherDTO> getCurrentWeather(
             @Parameter(description = "Latitude") @RequestParam Double lat,
             @Parameter(description = "Longitude") @RequestParam Double lon,
-            @Parameter(description = "City name") @RequestParam(defaultValue = "Unknown") String city) {
+            @Parameter(description = "City name") @RequestParam(defaultValue = "Unknown") String city) throws IOException {
         CurrentWeatherDTO weather = weatherService.getCurrentWeather(lat, lon, city);
         return ApiResponse.success(weather);
     }
@@ -34,7 +35,7 @@ public class WeatherController {
     public ApiResponse<List<HourlyForecastDTO>> getHourlyForecast(
             @Parameter(description = "Latitude") @RequestParam Double lat,
             @Parameter(description = "Longitude") @RequestParam Double lon,
-            @Parameter(description = "City name") @RequestParam(defaultValue = "Unknown") String city) {
+            @Parameter(description = "City name") @RequestParam(defaultValue = "Unknown") String city) throws IOException {
         List<HourlyForecastDTO> forecast = weatherService.getHourlyForecast(lat, lon, city);
         return ApiResponse.success(forecast);
     }
@@ -44,7 +45,7 @@ public class WeatherController {
     public ApiResponse<List<DailyForecastDTO>> getDailyForecast(
             @Parameter(description = "Latitude") @RequestParam Double lat,
             @Parameter(description = "Longitude") @RequestParam Double lon,
-            @Parameter(description = "City name") @RequestParam(defaultValue = "Unknown") String city) {
+            @Parameter(description = "City name") @RequestParam(defaultValue = "Unknown") String city) throws IOException {
         List<DailyForecastDTO> forecast = weatherService.getDailyForecast(lat, lon, city);
         return ApiResponse.success(forecast);
     }
@@ -54,7 +55,7 @@ public class WeatherController {
     public ApiResponse<List<AlertDTO>> getAlerts(
             @Parameter(description = "Latitude") @RequestParam Double lat,
             @Parameter(description = "Longitude") @RequestParam Double lon,
-            @Parameter(description = "City name") @RequestParam(defaultValue = "Unknown") String city) {
+            @Parameter(description = "City name") @RequestParam(defaultValue = "Unknown") String city) throws IOException {
         List<AlertDTO> alerts = weatherService.getAlerts(lat, lon, city);
         return ApiResponse.success(alerts);
     }

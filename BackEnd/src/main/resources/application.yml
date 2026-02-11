@@ -32,10 +32,6 @@ spring:
         dialect: org.hibernate.dialect.H2Dialect
         format_sql: true
 
-app:
-  mock-enabled: false
-  force-real-api: true
-
 weather:
   provider: QWEATHER
   base-url: "https://nm4bjaxp7y.re.qweatherapi.com"

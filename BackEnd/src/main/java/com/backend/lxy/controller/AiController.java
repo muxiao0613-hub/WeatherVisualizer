@@ -9,6 +9,8 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
+import java.io.IOException;
+
 @RestController
 @RequestMapping("/api/ai")
 @RequiredArgsConstructor
@@ -19,7 +21,7 @@ public class AiController {
 
     @PostMapping("/chat")
     @Operation(summary = "Chat with AI assistant")
-    public ApiResponse<ChatResponseDTO> chat(@RequestBody ChatRequestDTO request) {
+    public ApiResponse<ChatResponseDTO> chat(@RequestBody ChatRequestDTO request) throws IOException {
         ChatResponseDTO response = aiService.chat(request);
         return ApiResponse.success(response);
     }
